@@ -2,31 +2,43 @@ import React, { useState, useEffect } from 'react';
 import './App.css'; 
 
 // =========================================================
-// FIREBASE İMPORT DÜZELTMESİ
-// Derleme hatasını önlemek için import'lar, global değişkenler olarak kabul edilecek şekilde ayarlandı.
-// Bu fonksiyonlar, Canvas ortamında otomatik olarak HTML/JS tarafından yüklendiği varsayılır.
-// Normal React projelerinde bu, 'npm install firebase' ve standart 'import' ile yapılır.
+// FIREBASE İMPORT VE GLOBAL DEĞİŞKEN DÜZELTMESİ
 // =========================================================
 
+// Global Canvas Değişkenlerini Güvenli Alma
+const getGlobalVar = (name, defaultValue = {}) => {
+  try {
+    const value = window[name];
+    if (typeof value === 'string' && value.startsWith('{')) {
+      return JSON.parse(value);
+    }
+    return value !== undefined ? value : defaultValue;
+  } catch (e) {
+    console.error(`Global değişken ${name} okunurken hata:`, e);
+    return defaultValue;
+  }
+};
+
+const firebaseConfig = getGlobalVar('__firebase_config', {});
+const appId = getGlobalVar('__app_id', 'default-app-id');
+// __initial_auth_token değişkeni, admin yetkisini belirler
+const initialAuthToken = getGlobalVar('__initial_auth_token', null); 
+
 // Global Firebase fonksiyonlarını varsayıyoruz
-const getAuth = window.firebase.auth.getAuth;
-const signInAnonymously = window.firebase.auth.signInAnonymously;
-const signInWithCustomToken = window.firebase.auth.signInWithCustomToken;
-const onAuthStateChanged = window.firebase.auth.onAuthStateChanged;
+const getAuth = window.firebase ? window.firebase.auth.getAuth : null;
+const signInAnonymously = window.firebase ? window.firebase.auth.signInAnonymously : null;
+const signInWithCustomToken = window.firebase ? window.firebase.auth.signInWithCustomToken : null;
+const onAuthStateChanged = window.firebase ? window.firebase.auth.onAuthStateChanged : null;
 
-const getFirestore = window.firebase.firestore.getFirestore;
-const collection = window.firebase.firestore.collection;
-const query = window.firebase.firestore.query;
-const onSnapshot = window.firebase.firestore.onSnapshot;
-const addDoc = window.firebase.firestore.addDoc;
-const deleteDoc = window.firebase.firestore.deleteDoc;
-const doc = window.firebase.firestore.doc; // Doc referansı için eklendi
+const getFirestore = window.firebase ? window.firebase.firestore.getFirestore : null;
+const collection = window.firebase ? window.firebase.firestore.collection : null;
+const query = window.firebase ? window.firebase.firestore.query : null;
+const onSnapshot = window.firebase ? window.firebase.firestore.onSnapshot : null;
+const addDoc = window.firebase ? window.firebase.firestore.addDoc : null;
+const deleteDoc = window.firebase ? window.firebase.firestore.deleteDoc : null;
+const doc = window.firebase ? window.firebase.firestore.doc : null; 
+const initializeApp = window.firebase ? window.firebase.app.initializeApp : null;
 
-// Canvas tarafından sağlanan global değişkenler
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
-  : {};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // =========================================================
 // B. ZAMANLAYICI SEÇENEKLERİ (Saniye cinsinden)
@@ -63,64 +75,59 @@ function App() {
   // C. FIREBASE VE YETKİLENDİRME ETKİSİ (useEffect Hook)
   // =========================================================
   useEffect(() => {
+    // 💡 KRİTİK ADIM: Admin yetkisini, token varsa hemen senkron olarak veriyoruz.
+    // Bu kontrol, asenkron Firebase işlemlerinden bağımsızdır.
+    if (initialAuthToken) {
+        setIsAdmin(true); 
+    }
+
     const initializeFirebase = async () => {
+      // Firebase fonksiyonları veya config yoksa başlatma
+      if (!initializeApp || !getFirestore || !getAuth || Object.keys(firebaseConfig).length === 0) {
+        console.error("Firebase SDK'ları veya konfigürasyonu bulunamadı. Uygulama kalıcı veri olmadan çalışacak.");
+        setIsLoading(false);
+        return;
+      }
+      
       try {
-        // Firebase uygulamasını başlatma (window.firebase global objesinden initializeApp alınır)
-        const app = window.firebase.app.initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
         const firestore = getFirestore(app);
         const authentication = getAuth(app);
         
         setDb(firestore);
         setAuth(authentication);
 
-        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        if (token) {
-          await signInWithCustomToken(authentication, token);
+        if (initialAuthToken) {
+          await signInWithCustomToken(authentication, initialAuthToken);
         } else {
-          // Gerekirse anonim giriş
           await signInAnonymously(authentication);
         }
 
-        // Auth durumu değiştiğinde kullanıcı bilgilerini al
         const unsubscribe = onAuthStateChanged(authentication, (user) => {
           if (user) {
             const currentUserId = user.uid;
             setUserId(currentUserId);
-            
-            // Canvas ortamında token ile gelen kullanıcıyı admin olarak varsayıyoruz.
-            // Bu, Admin panelini etkinleştirmek için yeterli bir kontrol.
-            setIsAdmin(true); 
           }
           setIsLoading(false);
         });
 
-        // Temizleme fonksiyonu
         return () => unsubscribe();
 
       } catch (error) {
         console.error("Firebase başlatılırken hata oluştu:", error);
-        // Hata durumunda bile loadingi kapat
         setIsLoading(false);
       }
     };
 
-    // Global 'window.firebase' nesnesinin yüklenmesini bekle (Gerekirse)
-    if (window.firebase && window.firebase.app) {
-        initializeFirebase();
-    } else {
-        // Eğer React ortamında 'window.firebase' hemen yüklenmezse, burada bir uyarı veririz.
-        console.error("Firebase SDK'ları React ortamında global olarak bulunamadı. Lütfen Canvas'ın bu SDK'ları yüklediğinden emin olun.");
-        setIsLoading(false);
-    }
+    initializeFirebase();
 
-  }, []);
+  }, []); // Bağımlılık dizisi boş kalmalı, sadece başlangıçta çalışır
 
   // =========================================================
   // D. METİN VERİLERİNİ ÇEKME ETKİSİ (useEffect Hook)
   // =========================================================
   useEffect(() => {
-    if (!db || isLoading) return; // DB hazır olana kadar bekle
+    if (!db || isLoading || !collection || !query || !onSnapshot) return; // DB hazır olana kadar bekle
 
     // Verilerin saklanacağı koleksiyon yolu (Herkese açık)
     const collectionPath = `/artifacts/${appId}/public/data/typing_texts`;
@@ -137,11 +144,17 @@ function App() {
 
       // Eğer seçili metin yoksa veya metinler ilk kez yükleniyorsa ilk metni seç
       if (texts.length > 0 && selectedText === '') {
-        setSelectedText(texts[0].text);
-        resetTest(selectedTime, texts[0].text);
+        const initialText = texts[0].text;
+        setSelectedText(initialText);
+        // Eğer metin yoksa, resetTest'e metni de geçmeliyiz.
+        if (initialText) {
+             resetTest(selectedTime, initialText); 
+        } else {
+             resetTest(selectedTime, '');
+        }
       } else if (texts.length === 0) {
         setSelectedText('');
-        resetTest();
+        resetTest(selectedTime, '');
       }
     }, (error) => {
       console.error("Firestore verileri çekilirken hata oluştu:", error);
@@ -315,7 +328,7 @@ function App() {
   
   const handleAddText = async (event) => {
     event.preventDefault();
-    if (!db || !isAdmin) return;
+    if (!db || !isAdmin || !addDoc || !collection) return;
 
     const newTextarea = event.target.elements.newTextarea;
     const newText = newTextarea.value.trim();
@@ -327,7 +340,6 @@ function App() {
           createdAt: new Date().toISOString()
         });
         newTextarea.value = ''; // Formu temizle
-        // Pop-up yerine console veya UI mesajı kullanın
       } catch (e) {
         console.error("Metin eklenirken hata oluştu: ", e);
       }
@@ -337,7 +349,7 @@ function App() {
   };
 
   const handleDeleteText = async (id) => {
-    if (!db || !isAdmin) return;
+    if (!db || !isAdmin || !deleteDoc || !doc) return;
     
     // En az bir metin kalmasını sağlamak
     if (kaynakMetinler.length <= 1) {
@@ -371,7 +383,7 @@ function App() {
         <div className="admin-header">
           <h2>Admin Metin Yönetim Paneli</h2>
           {/* Admin ID kontrolü basittir, Firebase token sahibi her zaman admin sayılır. */}
-          {isAdmin && <p className="admin-user-info">Kullanıcı ID (Admin): {userId}</p>}
+          {isAdmin && <p className="admin-user-info">Kullanıcı ID (Admin): {userId || "Yükleniyor..."}</p>}
           <button className="sifirla-btn" onClick={() => setShowAdmin(false)}>
             Test Ekranına Dön
           </button>

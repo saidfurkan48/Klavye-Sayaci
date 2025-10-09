@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css'; 
 
 // =========================================================
-// FIREBASE İMPORT VE GLOBAL DEĞİŞKEN DÜZELTMESİ
+// A. YETKİLENDİRME VE GÜVENLİK AYARLARI
 // =========================================================
 
 // Global Canvas Değişkenlerini Güvenli Alma
@@ -21,8 +21,11 @@ const getGlobalVar = (name, defaultValue = {}) => {
 
 const firebaseConfig = getGlobalVar('__firebase_config', {});
 const appId = getGlobalVar('__app_id', 'default-app-id');
-// __initial_auth_token değişkeni, admin yetkisini belirler
 const initialAuthToken = getGlobalVar('__initial_auth_token', null); 
+
+// 💡 YENİ: Hardcoded Admin Bilgileri (SADECE DEMO AMAÇLIDIR, GÜVENLİK RİSKİ TAŞIR)
+const ADMIN_USERNAME = "admin";
+const ADMIN_PASSWORD = "supersecretpassword123";
 
 // Global Firebase fonksiyonlarını varsayıyoruz
 const getAuth = window.firebase ? window.firebase.auth.getAuth : null;
@@ -68,16 +71,18 @@ function App() {
   const [db, setDb] = useState(null);
   const [auth, setAuth] = useState(null);
   const [userId, setUserId] = useState(null);
-  // 💡 KRİTİK DÜZELTME: isAdmin durumunu, initialAuthToken'in varlığına göre hemen başlatıyoruz.
-  const [isAdmin, setIsAdmin] = useState(!!initialAuthToken);
+  
+  // 💡 YENİ: Admin ve Giriş Durumu
+  const [isAdmin, setIsAdmin] = useState(false); // Sadece başarılı login ile true olacak
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Kullanıcının login olup olmadığını tutar
+  const [showLoginModal, setShowLoginModal] = useState(false); // Login modalını gösterir
+  
   const [isLoading, setIsLoading] = useState(true);
   
   // =========================================================
   // C. FIREBASE VE YETKİLENDİRME ETKİSİ (useEffect Hook)
   // =========================================================
   useEffect(() => {
-    // Not: isAdmin durumu artık burada ayarlanmıyor, yukarıda başlatılırken ayarlandı.
-
     const initializeFirebase = async () => {
       // Firebase fonksiyonları veya config yoksa başlatma
       if (!initializeApp || !getFirestore || !getAuth || Object.keys(firebaseConfig).length === 0) {
@@ -94,7 +99,7 @@ function App() {
         setDb(firestore);
         setAuth(authentication);
 
-        // Oturum açma işlemleri
+        // Oturum açma işlemleri (Anonim veya Canvas Token ile)
         if (initialAuthToken) {
           await signInWithCustomToken(authentication, initialAuthToken);
         } else {
@@ -103,9 +108,8 @@ function App() {
 
         const unsubscribe = onAuthStateChanged(authentication, (user) => {
           if (user) {
-            const currentUserId = user.uid;
-            setUserId(currentUserId);
-            // setIsAdmin(!!initialAuthToken); // Yetkiyi burada tekrar ayarlamak gereksiz
+            setUserId(user.uid);
+            // 💡 NOT: isAdmin durumu artık burada değil, LoginModal'da belirleniyor.
           }
           setIsLoading(false);
         });
@@ -366,9 +370,65 @@ function App() {
       console.error("Metin silinirken hata oluştu: ", e);
     }
   };
+  
+  // =========================================================
+  // H. ADMIN GİRİŞ MODALI
+  // =========================================================
+  
+  const LoginModal = () => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      setErrorMessage('');
+      
+      // Hardcoded kontrol
+      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        setIsLoggedIn(true);
+        setIsAdmin(true); 
+        setShowLoginModal(false);
+      } else {
+        setErrorMessage("Hatalı kullanıcı adı veya şifre.");
+      }
+    };
+
+    return (
+      <div className="login-modal-overlay">
+        <div className="login-modal">
+          <h2>Admin Girişi</h2>
+          <p className="login-uyari">
+             ⚠️ Bu giriş **sadece demo amaçlıdır**. Gerçek projelerde bu şekilde şifre tutulmaz.
+             <br/>
+             Demo Bilgileri: Kullanıcı Adı: **{ADMIN_USERNAME}**, Şifre: **{ADMIN_PASSWORD}**
+          </p>
+          <form onSubmit={handleSubmit}>
+            <input 
+              type="text" 
+              placeholder="Kullanıcı Adı" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              required
+            />
+            <input 
+              type="password" 
+              placeholder="Şifre" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              required
+            />
+            {errorMessage && <p className="login-error">{errorMessage}</p>}
+            <button type="submit" className="kaydet-btn">Giriş Yap</button>
+            <button type="button" className="sifirla-btn" onClick={() => setShowLoginModal(false)}>İptal</button>
+          </form>
+        </div>
+      </div>
+    );
+  };
 
   // =========================================================
-  // H. RENDER KISMI (JSX)
+  // I. RENDER KISMI (JSX)
   // =========================================================
 
   if (isLoading) {
@@ -381,8 +441,8 @@ function App() {
       <div className="App admin-panel">
         <div className="admin-header">
           <h2>Admin Metin Yönetim Paneli</h2>
-          {/* Admin ID kontrolü basittir, Firebase token sahibi her zaman admin sayılır. */}
-          {isAdmin && <p className="admin-user-info">Kullanıcı ID (Admin): {userId || "Yükleniyor..."}</p>}
+          {/* Sadece başarılı giriş yapan kullanıcı ID'si gösterilir. */}
+          {isAdmin && <p className="admin-user-info">Kullanıcı ID (Oturum Açık): {userId || "Yükleniyor..."}</p>}
           <button className="sifirla-btn" onClick={() => setShowAdmin(false)}>
             Test Ekranına Dön
           </button>
@@ -426,7 +486,7 @@ function App() {
           </div>
         ) : (
           <div className="yetki-yok-mesaji">
-            <p>Bu sayfaya erişim yetkiniz yoktur. Sadece uygulamanın sahibi (Admin) metinleri yönetebilir.</p>
+            <p>Bu sayfaya erişim yetkiniz yoktur. Lütfen önce giriş yapın.</p>
           </div>
         )}
       </div>
@@ -438,9 +498,13 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>Klavye Sayacı & Hız Testi</h1>
-        {isAdmin && (
+        {isAdmin ? (
           <button className="admin-btn" onClick={() => setShowAdmin(true)}>
             Metin Yönetimi
+          </button>
+        ) : (
+          <button className="admin-btn" onClick={() => setShowLoginModal(true)}>
+            Admin Girişi
           </button>
         )}
       </header>
@@ -535,6 +599,9 @@ function App() {
         </button>
         <button className="sifirla-btn" onClick={() => resetTest()}>Sıfırla</button>
       </div>
+      
+      {/* GİRİŞ MODALINI GÖSTER */}
+      {showLoginModal && <LoginModal />}
     </div>
   );
 }

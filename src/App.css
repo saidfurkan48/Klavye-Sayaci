@@ -14,7 +14,7 @@
 /* Başlık */
 .App-header {
     width: 80%;
-    max-width: 800px;
+    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -46,7 +46,7 @@
 /* SONUÇ KUTUSU STİLLERİ */
 .sonuc-kutusu {
     width: 80%;
-    max-width: 800px;
+    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
     background-color: #3a3a3a;
     border: 2px solid #61dafb;
     border-radius: 10px;
@@ -108,7 +108,7 @@
 /* Kaynak Metin Alanı (Okuma Metni) - Konum ve Genişlik */
 .kaynak-metin-kutusu {
     width: 80%;
-    max-width: 800px;
+    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
     padding: 25px; 
     border: 1px solid #4caf50;
     border-radius: 8px;
@@ -135,7 +135,7 @@
 /* Yazma Alanı (Textarea) - BÜYÜK KUTU */
 textarea {
     width: 80%;
-    max-width: 800px; 
+    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
     min-height: 250px; /* YÜKSEKLİK ARTIRILDI */
     padding: 20px;
     border: 1px solid #555;
@@ -210,7 +210,7 @@ textarea:focus {
 
 .admin-content {
     width: 80%;
-    max-width: 800px;
+    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
     margin-top: 20px;
 }
 
@@ -271,4 +271,3 @@ textarea:focus {
     color: #f44336;
     margin-top: 10px;
 }
-

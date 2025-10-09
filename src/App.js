@@ -68,18 +68,15 @@ function App() {
   const [db, setDb] = useState(null);
   const [auth, setAuth] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // 💡 KRİTİK DÜZELTME: isAdmin durumunu, initialAuthToken'in varlığına göre hemen başlatıyoruz.
+  const [isAdmin, setIsAdmin] = useState(!!initialAuthToken);
   const [isLoading, setIsLoading] = useState(true);
   
   // =========================================================
   // C. FIREBASE VE YETKİLENDİRME ETKİSİ (useEffect Hook)
   // =========================================================
   useEffect(() => {
-    // 💡 KRİTİK ADIM: Admin yetkisini, token varsa hemen senkron olarak veriyoruz.
-    // Bu kontrol, asenkron Firebase işlemlerinden bağımsızdır.
-    if (initialAuthToken) {
-        setIsAdmin(true); 
-    }
+    // Not: isAdmin durumu artık burada ayarlanmıyor, yukarıda başlatılırken ayarlandı.
 
     const initializeFirebase = async () => {
       // Firebase fonksiyonları veya config yoksa başlatma
@@ -97,6 +94,7 @@ function App() {
         setDb(firestore);
         setAuth(authentication);
 
+        // Oturum açma işlemleri
         if (initialAuthToken) {
           await signInWithCustomToken(authentication, initialAuthToken);
         } else {
@@ -107,6 +105,7 @@ function App() {
           if (user) {
             const currentUserId = user.uid;
             setUserId(currentUserId);
+            // setIsAdmin(!!initialAuthToken); // Yetkiyi burada tekrar ayarlamak gereksiz
           }
           setIsLoading(false);
         });

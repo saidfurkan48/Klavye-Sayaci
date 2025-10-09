@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './App.css'; // Stil dosyanızın adı App.css olmalı
+import './App.css'; 
 
 // =========================================================
 // A. TANIMLANAN METİNLER
@@ -23,10 +23,10 @@ const ZAMAN_SECENEKLERI = [
 function App() {
   // Durum Yönetimi (State Management)
   const [inputText, setInputText] = useState('');
-  const [selectedText, setSelectedText] = useState(KAYNAK_METINLERI[0].text); // Varsayılan metin
-  const [isTyping, setIsTyping] = useState(false); // Yazmaya başlandı mı?
-  const [timeLeft, setTimeLeft] = useState(ZAMAN_SECENEKLERI[0].value); // Varsayılan zaman: 1 Dakika (60 saniye)
-  const [selectedTime, setSelectedTime] = useState(ZAMAN_SECENEKLERI[0].value); // Seçilen zaman
+  const [selectedText, setSelectedText] = useState(KAYNAK_METINLERI[0].text); 
+  const [isTyping, setIsTyping] = useState(false); 
+  const [timeLeft, setTimeLeft] = useState(ZAMAN_SECENEKLERI[0].value); 
+  const [selectedTime, setSelectedTime] = useState(ZAMAN_SECENEKLERI[0].value); 
 
   // Yazma Alanı Değiştiğinde
   const handleInputChange = (event) => {
@@ -144,7 +144,7 @@ function App() {
         placeholder={timeLeft === 0 ? "Süre doldu! Yeni bir test başlatın." : "Buraya yaz..."}
         value={inputText}
         onChange={handleInputChange}
-        disabled={timeLeft === 0 && selectedTime !== Infinity} // Zaman bittiyse alanı kapat
+        disabled={timeLeft === 0 && selectedTime !== Infinity}
         rows="8"
       />
 
@@ -155,111 +155,8 @@ function App() {
         <button className="kaydet-btn" disabled={isTyping && timeLeft > 0}>Kaydet/Sonuçlandır</button>
         <button className="sifirla-btn" onClick={() => resetTest()}>Sıfırla</button>
       </div>
-
-      {/* Hata Mesajı veya Sonuçlar (Gelecekte eklenir) */}
     </div>
   );
 }
-/* ========================================================= */
-/* YENİ STİL KODLARI: App.css'e ekleyin */
-/* ========================================================= */
 
-.kontrol-alanı {
-  display: flex;
-  gap: 30px;
-  justify-content: center;
-  margin-bottom: 20px;
-  color: #e0e0e0;
-}
-
-.kontrol-alanı label {
-    margin-right: 10px;
-}
-
-.kontrol-alanı select {
-    padding: 8px 12px;
-    border: 1px solid #444;
-    border-radius: 4px;
-    background-color: #333;
-    color: #e0e0e0;
-}
-
-.timer-gosterge p {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #4caf50; /* Yeşil zaman göstergesi */
-    margin-bottom: 15px;
-}
-
-.kaynak-metin-kutusu {
-  width: 80%;
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 20px;
-  border: 1px solid #4caf50;
-  border-radius: 8px;
-  background-color: #2e2e2e;
-  color: #e0e0e0;
-  text-align: left;
-  line-height: 1.6;
-  user-select: none; /* Metnin seçilmesini engeller, sadece bakılarak yazılmasını teşvik eder */
-  font-family: monospace; /* Daha okunur bir font */
-}
-
-/* Mevcut textarea stilinizi güncelleyebilirsiniz */
-textarea {
-    width: 80%;
-    max-width: 800px;
-    padding: 15px;
-    border: 1px solid #555;
-    border-radius: 6px;
-    background-color: #1a1a1a;
-    color: white;
-    font-size: 1.1em;
-    resize: vertical; /* Sadece dikey olarak boyutlandırmaya izin ver */
-}
-
-.bilgi-alanı {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    margin-top: 20px;
-    color: #e0e0e0;
-}
-
-/* Yeni Sıfırla Butonu için stil */
-/* SIFIRLA BUTONU İÇİN (KIRMIZI OLMALI) */
-.sifirla-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    background-color: #f44336; /* KIRMIZI */
-    color: white;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-
-.sifirla-btn:hover {
-    background-color: #d32f2f;
-}
-
-/* KAYDET BUTONU İÇİN (YEŞİL OLMALI) */
-.kaydet-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    background-color: #4caf50; /* YEŞİL */
-    color: white;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-
-.kaydet-btn:disabled {
-    background-color: #777;
-    cursor: not-allowed;
-}
 export default App;

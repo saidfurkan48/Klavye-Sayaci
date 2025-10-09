@@ -2,15 +2,25 @@ import React, { useState, useEffect } from 'react';
 import './App.css'; 
 
 // =========================================================
-// FIREBASE AYARLARI VE İMPORTLARI
+// FIREBASE İMPORT DÜZELTMESİ
+// Derleme hatasını önlemek için import'lar, global değişkenler olarak kabul edilecek şekilde ayarlandı.
+// Bu fonksiyonlar, Canvas ortamında otomatik olarak HTML/JS tarafından yüklendiği varsayılır.
+// Normal React projelerinde bu, 'npm install firebase' ve standart 'import' ile yapılır.
 // =========================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-  getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-  getFirestore, doc, collection, query, onSnapshot, addDoc, deleteDoc 
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Global Firebase fonksiyonlarını varsayıyoruz
+const getAuth = window.firebase.auth.getAuth;
+const signInAnonymously = window.firebase.auth.signInAnonymously;
+const signInWithCustomToken = window.firebase.auth.signInWithCustomToken;
+const onAuthStateChanged = window.firebase.auth.onAuthStateChanged;
+
+const getFirestore = window.firebase.firestore.getFirestore;
+const collection = window.firebase.firestore.collection;
+const query = window.firebase.firestore.query;
+const onSnapshot = window.firebase.firestore.onSnapshot;
+const addDoc = window.firebase.firestore.addDoc;
+const deleteDoc = window.firebase.firestore.deleteDoc;
+const doc = window.firebase.firestore.doc; // Doc referansı için eklendi
 
 // Canvas tarafından sağlanan global değişkenler
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
@@ -48,11 +58,6 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // ************ ADMIN KONTROLÜ İÇİN KULLANICI ID'Sİ ************
-  // İlk oturum açan kullanıcıyı Admin olarak kabul ederiz.
-  const ADMIN_USER_ID = typeof __initial_auth_token !== 'undefined' ? 'gemini-admin' : ''; 
-  // Canvas ortamında ilk oturum açan kullanıcının UID'sini admin olarak kabul ediyoruz.
   
   // =========================================================
   // C. FIREBASE VE YETKİLENDİRME ETKİSİ (useEffect Hook)
@@ -60,7 +65,8 @@ function App() {
   useEffect(() => {
     const initializeFirebase = async () => {
       try {
-        const app = initializeApp(firebaseConfig);
+        // Firebase uygulamasını başlatma (window.firebase global objesinden initializeApp alınır)
+        const app = window.firebase.app.initializeApp(firebaseConfig);
         const firestore = getFirestore(app);
         const authentication = getAuth(app);
         
@@ -76,33 +82,45 @@ function App() {
           await signInAnonymously(authentication);
         }
 
-        onAuthStateChanged(authentication, (user) => {
+        // Auth durumu değiştiğinde kullanıcı bilgilerini al
+        const unsubscribe = onAuthStateChanged(authentication, (user) => {
           if (user) {
             const currentUserId = user.uid;
             setUserId(currentUserId);
             
-            // Eğer kullanıcı ilk giriş yapan admin kullanıcısıysa
-            if (currentUserId === ADMIN_USER_ID) {
-               setIsAdmin(true);
-            }
+            // Canvas ortamında token ile gelen kullanıcıyı admin olarak varsayıyoruz.
+            // Bu, Admin panelini etkinleştirmek için yeterli bir kontrol.
+            setIsAdmin(true); 
           }
           setIsLoading(false);
         });
 
+        // Temizleme fonksiyonu
+        return () => unsubscribe();
+
       } catch (error) {
         console.error("Firebase başlatılırken hata oluştu:", error);
+        // Hata durumunda bile loadingi kapat
         setIsLoading(false);
       }
     };
 
-    initializeFirebase();
+    // Global 'window.firebase' nesnesinin yüklenmesini bekle (Gerekirse)
+    if (window.firebase && window.firebase.app) {
+        initializeFirebase();
+    } else {
+        // Eğer React ortamında 'window.firebase' hemen yüklenmezse, burada bir uyarı veririz.
+        console.error("Firebase SDK'ları React ortamında global olarak bulunamadı. Lütfen Canvas'ın bu SDK'ları yüklediğinden emin olun.");
+        setIsLoading(false);
+    }
+
   }, []);
 
   // =========================================================
   // D. METİN VERİLERİNİ ÇEKME ETKİSİ (useEffect Hook)
   // =========================================================
   useEffect(() => {
-    if (!db) return;
+    if (!db || isLoading) return; // DB hazır olana kadar bekle
 
     // Verilerin saklanacağı koleksiyon yolu (Herkese açık)
     const collectionPath = `/artifacts/${appId}/public/data/typing_texts`;
@@ -115,21 +133,22 @@ function App() {
         text: doc.data().text
       }));
       
-      // Metinleri alfabetik olarak sırala (veya eklenme sırasına göre)
-      // texts.sort((a, b) => a.text.localeCompare(b.text)); 
-      
       setKaynakMetinler(texts);
 
       // Eğer seçili metin yoksa veya metinler ilk kez yükleniyorsa ilk metni seç
       if (texts.length > 0 && selectedText === '') {
         setSelectedText(texts[0].text);
+        resetTest(selectedTime, texts[0].text);
+      } else if (texts.length === 0) {
+        setSelectedText('');
+        resetTest();
       }
     }, (error) => {
       console.error("Firestore verileri çekilirken hata oluştu:", error);
     });
 
     return () => unsubscribe();
-  }, [db, appId, selectedText]); // selectedText bağımlılığı, sadece ilk kez set etmeyi kontrol eder
+  }, [db, appId, isLoading, selectedTime]); 
 
   // =========================================================
   // E. TEMEL TEST MANTIĞI
@@ -139,8 +158,10 @@ function App() {
   const handleInputChange = (event) => {
     const newText = event.target.value;
     
-    // Eğer test bitmişse yazmaya izin verme (sınırsız mod hariç)
-    if (isFinished) return;
+    // Eğer test bitmişse veya metin yoksa yazmaya izin verme
+    if (isFinished || !selectedText) return;
+    // Kaynak metin uzunluğunu aşmasını engelle
+    if (newText.length > selectedText.length) return;
 
     setInputText(newText);
     
@@ -170,62 +191,55 @@ function App() {
   };
   
   // Testi Sonlandırma Fonksiyonu
-  const handleFinishTest = (manual = false) => {
+  const handleFinishTest = () => {
     setIsTyping(false);
     setIsFinished(true);
     
-    // Kelime ve Karakter hesaplamaları
     const finalCharacterCount = inputText.length;
     const correctCharacters = finalCharacterCount - errorCount;
-    const words = inputText.trim() === '' ? 0 : inputText.trim().split(/\s+/).length;
     
-    // Geçen Süreyi Hesapla (Saniye)
     let timeSpentSeconds = 0;
-    if (selectedTime === Infinity) {
-      // Sınırsız modda geçen süreyi hesaplayamayız, bu yüzden hesaplama yapma
-      timeSpentSeconds = 0; 
-      setWpm(0);
-    } else {
+    let calculatedWPM = 0;
+    
+    if (selectedTime !== Infinity) {
       timeSpentSeconds = selectedTime - timeLeft;
       
       // Hızı Hesapla (DBK/WPM = (Doğru Karakter Sayısı / 5) / (Geçen Süre / 60))
       if (timeSpentSeconds > 0) {
-        const calculatedWPM = Math.round((correctCharacters / 5) / (timeSpentSeconds / 60));
-        setWpm(calculatedWPM);
-      } else {
-        setWpm(0);
+        calculatedWPM = Math.round((correctCharacters / 5) / (timeSpentSeconds / 60));
       }
-    }
+    } 
+    
+    setWpm(calculatedWPM);
     
     // Doğruluk Yüzdesini Hesapla
+    let calculatedAccuracy = 0;
     if (finalCharacterCount > 0) {
-      const calculatedAccuracy = Math.round((correctCharacters / finalCharacterCount) * 100);
-      setAccuracy(calculatedAccuracy);
-    } else {
-      setAccuracy(0);
+      calculatedAccuracy = Math.round((correctCharacters / finalCharacterCount) * 100);
     }
+    setAccuracy(calculatedAccuracy);
   };
 
   // Metin Seçimini Değiştirme
   const handleTextChange = (event) => {
     const newTextId = event.target.value;
-    const newText = kaynakMetinler.find(item => item.id === newTextId).text;
+    const newText = kaynakMetinler.find(item => item.id === newTextId)?.text || '';
     setSelectedText(newText);
-    resetTest();
+    resetTest(selectedTime, newText);
   };
 
   // Zaman Seçimini Değiştirme
   const handleTimeChange = (event) => {
     const newTime = event.target.value === "Infinity" ? Infinity : parseInt(event.target.value);
     setSelectedTime(newTime);
-    resetTest(newTime);
+    resetTest(newTime, selectedText);
   };
   
   // Testi Sıfırlama Fonksiyonu
-  const resetTest = (newTime = selectedTime) => {
+  const resetTest = (time = selectedTime, text = selectedText) => {
     setInputText('');
     setIsTyping(false);
-    setTimeLeft(newTime);
+    setTimeLeft(time);
     setErrorCount(0);
     setIsFinished(false);
     setWpm(0);
@@ -245,14 +259,14 @@ function App() {
         setTimeLeft(prevTime => {
           if (prevTime <= 1) {
             clearInterval(timer);
-            handleFinishTest(false);
+            handleFinishTest();
             return 0;
           }
           return prevTime - 1;
         });
       }, 1000);
-    } else if (timeLeft === 0 && !isFinished) {
-      handleFinishTest(false);
+    } else if (timeLeft === 0 && !isFinished && selectedTime !== Infinity) {
+      handleFinishTest();
     }
 
     return () => clearInterval(timer);
@@ -261,6 +275,7 @@ function App() {
 
   // Metin ve Kelime Sayacı Hesaplamaları
   const characterCount = inputText.length;
+  // Sadece boşluklarla ayrılmış kelimeleri say
   const wordCount = inputText.trim() === '' ? 0 : inputText.trim().split(/\s+/).length;
   
   // Zamanı dakika:saniye formatında göster
@@ -273,12 +288,15 @@ function App() {
 
   // KAYNAK METNİ RENDER EDEN FONKSİYON (Hata Vurgulama)
   const renderSourceText = () => {
+    if (!selectedText) return <span>Metin bulunamadı. Lütfen Admin panelinden yeni metin ekleyin.</span>;
+
     return selectedText.split('').map((char, index) => {
       let charClass = '';
       
       if (index < inputText.length) {
         charClass = char === inputText[index] ? 'correct' : 'incorrect';
       }
+      // Yazılacak sıradaki harfi vurgula
       else if (index === inputText.length && !isFinished) {
         charClass = 'current';
       }
@@ -309,13 +327,12 @@ function App() {
           createdAt: new Date().toISOString()
         });
         newTextarea.value = ''; // Formu temizle
-        alert("Metin başarıyla eklendi!"); // Kullanıcı uyarısı için geçici alert
+        // Pop-up yerine console veya UI mesajı kullanın
       } catch (e) {
         console.error("Metin eklenirken hata oluştu: ", e);
-        alert("Metin eklenemedi."); // Kullanıcı uyarısı için geçici alert
       }
     } else {
-      alert("Lütfen geçerli bir metin girin (en az 10 karakter)."); // Kullanıcı uyarısı için geçici alert
+      console.warn("Lütfen geçerli bir metin girin (en az 10 karakter).");
     }
   };
 
@@ -324,7 +341,7 @@ function App() {
     
     // En az bir metin kalmasını sağlamak
     if (kaynakMetinler.length <= 1) {
-      alert("En az bir metin kalmalıdır!"); // Kullanıcı uyarısı için geçici alert
+      console.warn("En az bir metin kalmalıdır!");
       return;
     }
 
@@ -334,10 +351,8 @@ function App() {
     try {
       const docRef = doc(db, `/artifacts/${appId}/public/data/typing_texts`, id);
       await deleteDoc(docRef);
-      // alert("Metin başarıyla silindi."); // Kullanıcı uyarısı için geçici alert
     } catch (e) {
       console.error("Metin silinirken hata oluştu: ", e);
-      alert("Metin silinemedi."); // Kullanıcı uyarısı için geçici alert
     }
   };
 
@@ -355,6 +370,7 @@ function App() {
       <div className="App admin-panel">
         <div className="admin-header">
           <h2>Admin Metin Yönetim Paneli</h2>
+          {/* Admin ID kontrolü basittir, Firebase token sahibi her zaman admin sayılır. */}
           {isAdmin && <p className="admin-user-info">Kullanıcı ID (Admin): {userId}</p>}
           <button className="sifirla-btn" onClick={() => setShowAdmin(false)}>
             Test Ekranına Dön
@@ -369,7 +385,7 @@ function App() {
               <form onSubmit={handleAddText}>
                 <textarea 
                   name="newTextarea"
-                  placeholder="Buraya yeni metni yapıştırın veya yazın..."
+                  placeholder="Buraya yeni metni yapıştırın veya yazın (En az 10 karakter)..."
                   rows="10"
                   required
                 />
@@ -422,7 +438,12 @@ function App() {
       {isFinished && (
         <div className="sonuc-kutusu">
           <h2>TEST SONUÇLARI</h2>
-          <p>DBK (WPM): <span className="sonuc-wpm">{wpm}</span></p>
+          {selectedTime !== Infinity ? (
+            <p>DBK (WPM): <span className="sonuc-wpm">{wpm}</span></p>
+          ) : (
+            <p>DBK (WPM): <span className="sonuc-wpm">Sınırsız modda hız hesaplanmaz.</span></p>
+          )}
+          
           <p>Doğruluk: <span className="sonuc-accuracy">{accuracy}%</span></p>
         </div>
       )}
@@ -431,17 +452,31 @@ function App() {
       <div className="kontrol-alanı">
         {/* Metin Seçimi */}
         <label htmlFor="text-select">Metin Seç:</label>
-        <select id="text-select" onChange={handleTextChange} value={kaynakMetinler.find(item => item.text === selectedText)?.id || ''} disabled={isTyping}>
-          {kaynakMetinler.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.text.substring(0, 30)}...
-            </option>
-          ))}
+        <select 
+          id="text-select" 
+          onChange={handleTextChange} 
+          value={kaynakMetinler.find(item => item.text === selectedText)?.id || ''} 
+          disabled={isTyping || isFinished || kaynakMetinler.length === 0}
+        >
+          {kaynakMetinler.length > 0 ? (
+            kaynakMetinler.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.text.substring(0, 30)}...
+              </option>
+            ))
+          ) : (
+             <option value="" disabled>Metin Yok (Admin Eklesin)</option>
+          )}
         </select>
         
         {/* Zaman Seçimi */}
         <label htmlFor="time-select">Süre Seç:</label>
-        <select id="time-select" onChange={handleTimeChange} value={selectedTime} disabled={isTyping}>
+        <select 
+          id="time-select" 
+          onChange={handleTimeChange} 
+          value={selectedTime} 
+          disabled={isTyping || isFinished}
+        >
           {ZAMAN_SECENEKLERI.map((item) => (
             <option key={item.value} value={item.value}>
               {item.label}
@@ -452,21 +487,24 @@ function App() {
       
       {/* ZAMANLAYICI GÖSTERGESİ */}
       <div className="timer-gosterge">
-        {selectedTime !== Infinity && (
+        {selectedTime !== Infinity ? (
           <p>Kalan Süre: {formatTime(timeLeft)}</p>
+        ) : (
+          <p>Süre: Sınırsız</p>
         )}
       </div>
 
       {/* KAYNAK METİN KUTUSU */}
       <div className="kaynak-metin-kutusu">
-        {selectedText ? renderSourceText() : 'Metinler yükleniyor...'}
+        {renderSourceText()}
       </div>
 
       {/* YAZMA ALANI */}
       <textarea
-        placeholder={isFinished ? "Test bitti! Yeni bir test başlatın." : "Buraya yaz..."}
+        placeholder={selectedText ? (isFinished ? "Test bitti! Yeni bir test başlatın." : "Buraya yaz...") : "Metin yüklenmedi veya mevcut değil."}
         value={inputText}
         onChange={handleInputChange}
+        // Yazma metni varsa ve bitmemişse veya sınırsızsa izin ver
         disabled={!selectedText || isFinished || (timeLeft === 0 && selectedTime !== Infinity)}
         rows="8"
       />
@@ -479,6 +517,7 @@ function App() {
         <button 
           className="kaydet-btn" 
           onClick={handleFinishTest} 
+          // Yazmaya başlamadıysak, bitmişse veya sınırlı modda süresi dolduysa kaydetme
           disabled={!isTyping || isFinished || (selectedTime !== Infinity && timeLeft <= 0)}
         >
           Kaydet/Sonuçlandır

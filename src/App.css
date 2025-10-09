@@ -12,10 +12,36 @@
 }
 
 /* Başlık */
-.App-header h1 {
-    color: #61dafb;
+.App-header {
+    width: 80%;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 30px;
 }
+
+.App-header h1 {
+    color: #61dafb;
+    margin: 0;
+}
+
+/* Admin Butonu */
+.admin-btn {
+    padding: 8px 15px;
+    border: 1px solid #61dafb;
+    border-radius: 5px;
+    background-color: #1a1a1a;
+    color: #61dafb;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.admin-btn:hover {
+    background-color: #333;
+}
+
 
 /* SONUÇ KUTUSU STİLLERİ */
 .sonuc-kutusu {
@@ -49,10 +75,9 @@
 
 /* Kontrol Alanı - YUKARI TAŞINDI */
 .kontrol-alanı {
-    /* Başlığın hemen altında, diğer her şeyden önce görünmeli */
     display: flex;
     gap: 30px;
-    margin-bottom: 40px; /* Diğer elementlerden ayırmak için */
+    margin-bottom: 40px; 
     align-items: center;
     justify-content: center;
 }
@@ -117,7 +142,7 @@ textarea {
     border-radius: 6px;
     background-color: #1a1a1a;
     color: white;
-    font-size: 1.3em; /* Yazı boyutu artırıldı */
+    font-size: 1.3em; 
     resize: vertical;
     transition: border-color 0.3s;
 }
@@ -143,6 +168,7 @@ textarea:focus {
     font-weight: bold;
 }
 
+/* Genel Buton Stilleri */
 .sifirla-btn, .kaydet-btn {
     padding: 12px 25px;
     border: none;
@@ -174,3 +200,75 @@ textarea:focus {
     background-color: #777;
     cursor: not-allowed;
 }
+
+/* ========================================================= */
+/* ADMIN PANELİ STİLLERİ */
+/* ========================================================= */
+.admin-panel {
+    align-items: center;
+}
+
+.admin-content {
+    width: 80%;
+    max-width: 800px;
+    margin-top: 20px;
+}
+
+.metin-ekle-form, .mevcut-metinler {
+    background-color: #333;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    border: 1px solid #444;
+}
+
+.metin-ekle-form h2, .mevcut-metinler h2 {
+    color: #61dafb;
+    margin-top: 0;
+}
+
+.metin-ekle-form textarea {
+    width: 100%;
+    min-height: 100px;
+    box-sizing: border-box; /* Padding'in genişliğe dahil olmasını sağlar */
+    margin-bottom: 15px;
+    font-size: 1em;
+}
+
+.metin-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed #444;
+}
+
+.metin-list-item:last-child {
+    border-bottom: none;
+}
+
+.metin-list-item p {
+    margin: 0;
+    text-align: left;
+    flex-grow: 1;
+    margin-right: 15px;
+    padding: 0;
+    background-color: transparent;
+}
+
+.metin-list-item .metin-content {
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+.delete-btn {
+    background-color: #f44336;
+    padding: 8px 15px;
+    font-size: 0.8em;
+}
+
+.uyari-mesaj {
+    color: #f44336;
+    margin-top: 10px;
+}
+

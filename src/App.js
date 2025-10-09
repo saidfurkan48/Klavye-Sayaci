@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './App.css'; 
 
 // =========================================================
-// A. TANIMLANAN METİNLER
+// A. TANIMLANAN METİNLER (Artık state içinde yönetilecek)
 // =========================================================
-const KAYNAK_METINLERI = [
+const ILK_METINLER = [
   { id: 1, text: "React, kullanıcı arayüzleri oluşturmak için kullanılan açık kaynaklı bir JavaScript kütüphanesidir. Bileşen tabanlı yapısı sayesinde, büyük ölçekli ve hızlı uygulamalar geliştirmeyi kolaylaştırır. Git ve GitHub, projelerin versiyon kontrolü ve işbirliği için vazgeçilmez araçlardır." },
   { id: 2, text: "Yapay zeka (YZ), makinelerin insan benzeri zeka gösterme yeteneği üzerine kurulu bir bilgisayar bilimi dalıdır. Öğrenme, problem çözme ve karar verme gibi görevleri otomatize etmeyi hedefler." },
   { id: 3, text: "Modern web geliştirme süreçleri, genellikle frontend ve backend olarak ikiye ayrılır. Frontend, kullanıcının gördüğü arayüzle ilgilenirken, backend sunucu tarafındaki veri yönetimi ve iş mantığını yürütür." },
@@ -22,14 +22,57 @@ const ZAMAN_SECENEKLERI = [
 
 function App() {
   // Durum Yönetimi (State Management)
+  const [kaynakMetinler, setKaynakMetinler] = useState(ILK_METINLER);
   const [inputText, setInputText] = useState('');
-  const [selectedText, setSelectedText] = useState(KAYNAK_METINLERI[0].text); 
+  const [selectedText, setSelectedText] = useState(ILK_METINLER[0].text); 
   const [isTyping, setIsTyping] = useState(false); 
   const [timeLeft, setTimeLeft] = useState(ZAMAN_SECENEKLERI[0].value); 
   const [selectedTime, setSelectedTime] = useState(ZAMAN_SECENEKLERI[0].value); 
   const [errorCount, setErrorCount] = useState(0); 
   const [initialTime, setInitialTime] = useState(ZAMAN_SECENEKLERI[0].value); 
   const [result, setResult] = useState(null); 
+  const [isAdminOpen, setIsAdminOpen] = useState(false); // Admin Paneli Durumu
+  const [newText, setNewText] = useState(''); // Yeni Metin Ekleme Inputu
+  
+  // Metin listesi güncellendiğinde, seçili metni listeye göre ayarla
+  useEffect(() => {
+      // Eğer seçili metin listede yoksa veya liste boşsa, ilk metni seç
+      const currentSelected = kaynakMetinler.find(item => item.text === selectedText);
+      if (!currentSelected && kaynakMetinler.length > 0) {
+          setSelectedText(kaynakMetinler[0].text);
+          resetTest();
+      } else if (kaynakMetinler.length === 0) {
+          setSelectedText("");
+          resetTest();
+      }
+  }, [kaynakMetinler]);
+
+
+  // Metin Ekleme Fonksiyonu
+  const handleAddText = () => {
+      if (newText.trim() === '') return;
+      
+      const newId = kaynakMetinler.length > 0 
+          ? Math.max(...kaynakMetinler.map(m => m.id)) + 1 
+          : 1;
+          
+      const newMetin = { id: newId, text: newText.trim() };
+      
+      setKaynakMetinler(prev => [...prev, newMetin]);
+      setNewText(''); // Inputu temizle
+  };
+
+  // Metin Silme Fonksiyonu
+  const handleDeleteText = (idToDelete) => {
+      // Sadece 1'den fazla metin varsa silmeye izin ver
+      if (kaynakMetinler.length > 1) {
+          setKaynakMetinler(prev => prev.filter(m => m.id !== idToDelete));
+      } else {
+          alert("Uygulamanın çalışması için en az bir metin kalmalıdır!");
+      }
+      resetTest();
+  };
+
 
   // Yazma Alanı Değiştiğinde
   const handleInputChange = (event) => {
@@ -69,8 +112,7 @@ function App() {
   
   // Metin Seçimini Değiştirme
   const handleTextChange = (event) => {
-    const newTextId = parseInt(event.target.value);
-    const newText = KAYNAK_METINLERI.find(item => item.id === newTextId).text;
+    const newText = event.target.value;
     setSelectedText(newText);
     resetTest();
   };
@@ -90,7 +132,7 @@ function App() {
     // 2. Kullanılan süreyi hesapla (saniye cinsinden)
     let timeSpentSeconds;
     if (selectedTime === Infinity) {
-        // Sınırsız modda bitirdiyse, DBK hesaplaması şimdilik yok
+        // Sınırsız modda bitirdiyse, DBK hesaplaması yok
         timeSpentSeconds = 0; 
     } else {
         // Zamanlı modda: Başlangıç Süresi - Kalan Süre
@@ -98,7 +140,6 @@ function App() {
     }
     
     // 3. Yazılan doğru kelime sayısını bul
-    // Kelime sınırları için boşlukları kullan
     const currentInputWords = inputText.trim().split(/\s+/).filter(Boolean);
     let correctWords = 0;
     
@@ -127,8 +168,8 @@ function App() {
     setResult({
         wpm: calculatedWPM,
         accuracy: accuracy.toFixed(2), // 2 ondalık basamağa yuvarla
-        correctWords: correctChars, // Kelime yerine doğru karakter sayısını gösterelim
-        totalWordsTyped: totalCharsTyped // Kelime yerine toplam karakteri gösterelim
+        correctChars: correctChars, // Doğru karakter sayısı
+        totalCharsTyped: totalCharsTyped // Toplam karakter sayısı
     });
     
     // Kalan süreyi sıfırla (eğer sınırsız modda değilsek)
@@ -182,6 +223,8 @@ function App() {
 
   // KAYNAK METNİ RENDER EDEN FONKSİYON
   const renderSourceText = () => {
+    if (!selectedText) return <span className="no-text">Lütfen yönetici panelinden bir metin ekleyin.</span>;
+
     return selectedText.split('').map((char, index) => {
       let charClass = '';
       
@@ -202,21 +245,75 @@ function App() {
     });
   };
 
+    // Eğer admin paneli açıksa sadece paneli göster
+    if (isAdminOpen) {
+        return (
+            <div className="App admin-panel">
+                <header className="App-header">
+                    <h1>Metin Yönetim Paneli</h1>
+                    <button className="admin-btn" onClick={() => setIsAdminOpen(false)}>
+                        &larr; Hız Testine Dön
+                    </button>
+                </header>
+                
+                <div className="admin-content">
+                    {/* YENİ METİN EKLEME FORMU */}
+                    <div className="metin-ekle-form">
+                        <h2>Yeni Metin Ekle</h2>
+                        <textarea
+                            placeholder="Yeni metni buraya yapıştırın..."
+                            value={newText}
+                            onChange={(e) => setNewText(e.target.value)}
+                            rows="5"
+                        />
+                        <button className="kaydet-btn" onClick={handleAddText} disabled={!newText.trim()}>
+                            Metni Kaydet
+                        </button>
+                    </div>
+                    
+                    {/* MEVCUT METİNLERİN LİSTESİ */}
+                    <div className="mevcut-metinler">
+                        <h2>Mevcut Metinler ({kaynakMetinler.length})</h2>
+                        {kaynakMetinler.map((item) => (
+                            <div key={item.id} className="metin-list-item">
+                                <p><strong>Metin ID: {item.id}</strong></p>
+                                <p className="metin-content">{item.text.substring(0, 100)}...</p>
+                                <button 
+                                    className="sifirla-btn delete-btn" 
+                                    onClick={() => handleDeleteText(item.id)}
+                                    disabled={kaynakMetinler.length === 1}
+                                >
+                                    Sil
+                                </button>
+                            </div>
+                        ))}
+                        {kaynakMetinler.length === 1 && (
+                            <p className="uyari-mesaj">Uygulamanın çalışması için en az bir metin kalmalıdır.</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
 
   return (
     <div className="App">
       <header className="App-header">
         <h1>Klavye Sayacı & Hız Testi</h1>
+        <button className="admin-btn" onClick={() => setIsAdminOpen(true)}>
+            Metin Yönetimi &rarr;
+        </button>
       </header>
 
       {/* KONTROL ALANI (Metin/Süre Seçimi - EN YUKARIDA) */}
-      {!result && (
+      {!result && kaynakMetinler.length > 0 && (
         <div className="kontrol-alanı">
           {/* Metin Seçimi */}
           <label htmlFor="text-select">Metin Seç:</label>
-          <select id="text-select" onChange={handleTextChange}>
-            {KAYNAK_METINLERI.map((item) => (
-              <option key={item.id} value={item.id}>
+          <select id="text-select" onChange={handleTextChange} value={selectedText}>
+            {kaynakMetinler.map((item) => (
+              <option key={item.id} value={item.text}>
                 Metin {item.id}
               </option>
             ))}
@@ -240,8 +337,7 @@ function App() {
             <h2>Test Sonuçları</h2>
             <p className="sonuc-dbk">DBK (WPM): <strong>{result.wpm}</strong></p>
             <p>Doğruluk: <strong>%{result.accuracy}</strong></p>
-            {/* Doğru/Toplam Karakter sayısını gösteriyoruz, kelime değil */}
-            <p>Doğru Karakter: {result.correctWords} / {result.totalWordsTyped}</p>
+            <p>Doğru Karakter: {result.correctChars} / {result.totalCharsTyped}</p>
         </div>
       )}
       
@@ -263,7 +359,7 @@ function App() {
         value={inputText}
         onChange={handleInputChange}
         // Sonuç varsa veya süre dolmuşsa devre dışı bırak
-        disabled={!!result || (timeLeft === 0 && selectedTime !== Infinity)}
+        disabled={!selectedText || !!result || (timeLeft === 0 && selectedTime !== Infinity)}
         rows="8"
       />
 
@@ -276,7 +372,7 @@ function App() {
             className="kaydet-btn" 
             onClick={finishTest}
             // Sadece test başlamışsa ve sonuçlanmamışsa aktif olmalı
-            disabled={!isTyping || !!result || inputText.length === 0}
+            disabled={!selectedText || !isTyping || !!result || inputText.length === 0}
         >
             Kaydet/Sonuçlandır
         </button>

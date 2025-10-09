@@ -28,18 +28,21 @@ function App() {
   const [timeLeft, setTimeLeft] = useState(ZAMAN_SECENEKLERI[0].value); 
   const [selectedTime, setSelectedTime] = useState(ZAMAN_SECENEKLERI[0].value); 
   const [errorCount, setErrorCount] = useState(0); 
-  const [initialTime, setInitialTime] = useState(ZAMAN_SECENEKLERI[0].value); // Yeni: Başlangıç zamanını tutar
-  const [result, setResult] = useState(null); // Yeni: Sonuçları saklar (DBK, Doğruluk)
+  const [initialTime, setInitialTime] = useState(ZAMAN_SECENEKLERI[0].value); 
+  const [result, setResult] = useState(null); 
 
   // Yazma Alanı Değiştiğinde
   const handleInputChange = (event) => {
     const newText = event.target.value;
+    
+    // Eğer sonuçlar gösteriliyorsa yazmayı engelle
+    if (result) return;
+    
     setInputText(newText);
     
     // Zamanlayıcıyı başlat
     if (newText.length === 1 && !isTyping && selectedTime !== Infinity) {
       setIsTyping(true);
-      // İlk yazmaya başlandığında süreyi kaydet
       setInitialTime(selectedTime); 
     }
     
@@ -56,7 +59,8 @@ function App() {
   const updateErrorCount = (currentInput) => {
       let errors = 0;
       for (let i = 0; i < currentInput.length; i++) {
-          if (currentInput[i] !== selectedText[i]) {
+          // Kaynak metin uzunluğunu kontrol et
+          if (i < selectedText.length && currentInput[i] !== selectedText[i]) {
               errors++;
           }
       }
@@ -86,10 +90,7 @@ function App() {
     // 2. Kullanılan süreyi hesapla (saniye cinsinden)
     let timeSpentSeconds;
     if (selectedTime === Infinity) {
-        // Sınırsız modda veya metin bitince:
-        // Eğer metin bittiyse ve süre hala Infinity'de ise burayı basitleştiriyoruz, 
-        // normalde bu modda başlangıç ve bitiş zamanları tutulmalıydı. 
-        // Şimdilik DBK'yı hesaplamayalım veya sıfır gösterelim (geliştirilecek).
+        // Sınırsız modda bitirdiyse, DBK hesaplaması şimdilik yok
         timeSpentSeconds = 0; 
     } else {
         // Zamanlı modda: Başlangıç Süresi - Kalan Süre
@@ -97,13 +98,15 @@ function App() {
     }
     
     // 3. Yazılan doğru kelime sayısını bul
+    // Kelime sınırları için boşlukları kullan
     const currentInputWords = inputText.trim().split(/\s+/).filter(Boolean);
     let correctWords = 0;
     
-    // Sadece kaynak metindeki kelimelerle eşleşenleri doğru kelime say
+    // Kaynak metindeki kelimeler
     const sourceWords = selectedText.trim().split(/\s+/).filter(Boolean);
     
     for(let i = 0; i < currentInputWords.length; i++){
+        // Kaynak kelime mevcutsa ve eşleşiyorsa
         if(sourceWords[i] && currentInputWords[i] === sourceWords[i]){
             correctWords++;
         }
@@ -111,12 +114,14 @@ function App() {
     
     // 4. DBK (WPM) Hesapla (Dakika Başına Kelime)
     const timeSpentMinutes = timeSpentSeconds / 60;
-    // Eğer süre harcanmadıysa (timeSpentMinutes === 0), DBK hesaplamaktan kaçın.
+    // Eğer süre harcandıysa (en az 1 saniye) hesapla
     const calculatedWPM = timeSpentMinutes > 0 ? Math.round(correctWords / timeSpentMinutes) : 0;
     
     // 5. Doğruluk Yüzdesi Hesapla
     const totalCharsTyped = inputText.length;
-    const accuracy = totalCharsTyped > 0 ? ((totalCharsTyped - errorCount) / totalCharsTyped) * 100 : 0;
+    // Yanlış karakter sayısı = Toplam yazılan karakter - (Doğru yazılan karakterler)
+    const correctChars = totalCharsTyped - errorCount;
+    const accuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 0;
     
     // 6. Sonucu kaydet
     setResult({
@@ -154,7 +159,7 @@ function App() {
     } 
     
     // Eğer zaman biterse, testi sonlandır
-    if (timeLeft === 0 && isTyping) {
+    if (timeLeft === 0 && isTyping && selectedTime !== Infinity) {
         finishTest();
     }
 
@@ -164,7 +169,6 @@ function App() {
 
   // Metin ve Kelime Sayacı Hesaplamaları
   const characterCount = inputText.length;
-  // Sadece boşlukları baz alarak tahmini kelime sayısını hesapla
   const wordCount = inputText.trim() === '' ? 0 : inputText.trim().split(/\s+/).filter(Boolean).length;
   
   // Zamanı dakika:saniye formatında göster
@@ -177,4 +181,107 @@ function App() {
 
   // KAYNAK METNİ RENDER EDEN FONKSİYON
   const renderSourceText = () => {
-    return selectedText.split('').
+    return selectedText.split('').map((char, index) => {
+      let charClass = '';
+      
+      if (index < inputText.length) {
+        // Yazılan karakterin doğru/yanlış sınıfını belirle
+        charClass = char === inputText[index] ? 'correct' : 'incorrect';
+      }
+      // Eğer hala yazılıyorsa ve bu karakter sıradaki karakterse (vurgu)
+      else if (index === inputText.length && !result) {
+        charClass = 'current';
+      }
+      
+      return (
+        <span key={index} className={charClass}>
+          {char}
+        </span>
+      );
+    });
+  };
+
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>Klavye Sayacı & Hız Testi</h1>
+      </header>
+
+      {/* SONUÇ GÖSTERİMİ */}
+      {result && (
+        <div className="sonuc-kutusu">
+            <h2>Test Sonuçları</h2>
+            <p className="sonuc-dbk">DBK (WPM): <strong>{result.wpm}</strong></p>
+            <p>Doğruluk: <strong>%{result.accuracy}</strong></p>
+            <p>Doğru Kelime: {result.correctWords} / {result.totalWordsTyped}</p>
+        </div>
+      )}
+
+      {/* KONTROL ALANI (Sonuç varken gizle) */}
+      {!result && (
+        <div className="kontrol-alanı">
+          {/* Metin Seçimi */}
+          <label htmlFor="text-select">Metin Seç:</label>
+          <select id="text-select" onChange={handleTextChange}>
+            {KAYNAK_METINLERI.map((item) => (
+              <option key={item.id} value={item.id}>
+                Metin {item.id}
+              </option>
+            ))}
+          </select>
+          
+          {/* Zaman Seçimi */}
+          <label htmlFor="time-select">Süre Seç:</label>
+          <select id="time-select" onChange={handleTimeChange} value={selectedTime}>
+            {ZAMAN_SECENEKLERI.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      
+      {/* ZAMANLAYICI GÖSTERGESİ */}
+      <div className="timer-gosterge">
+        {selectedTime !== Infinity && (
+            <p>Kalan Süre: {formatTime(timeLeft)}</p>
+        )}
+      </div>
+
+      {/* KAYNAK METİN KUTUSU */}
+      <div className="kaynak-metin-kutusu">
+        {renderSourceText()}
+      </div>
+
+      {/* YAZMA ALANI */}
+      <textarea
+        placeholder={timeLeft === 0 && selectedTime !== Infinity ? "Süre doldu! Lütfen Sıfırla'ya basın." : "Buraya yaz..."}
+        value={inputText}
+        onChange={handleInputChange}
+        // Sonuç varsa veya süre dolmuşsa devre dışı bırak
+        disabled={!!result || (timeLeft === 0 && selectedTime !== Infinity)}
+        rows="8"
+      />
+
+      {/* SAYICI VE BUTONLAR */}
+      <div className="bilgi-alanı">
+        <p>Doğru Karakter: {characterCount - errorCount}</p>
+        <p>Hata Sayısı: {errorCount}</p>
+        <p>Kelime Sayısı: {wordCount}</p>
+        <button 
+            className="kaydet-btn" 
+            onClick={finishTest}
+            // Sadece test başlamışsa ve sonuçlanmamışsa aktif olmalı
+            disabled={!isTyping || !!result || inputText.length === 0}
+        >
+            Kaydet/Sonuçlandır
+        </button>
+        <button className="sifirla-btn" onClick={() => resetTest()}>Sıfırla</button>
+      </div>
+    </div>
+  );
+}
+
+export default App;

@@ -14,7 +14,7 @@
 /* Başlık */
 .App-header {
     width: 80%;
-    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
+    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -46,7 +46,7 @@
 /* SONUÇ KUTUSU STİLLERİ */
 .sonuc-kutusu {
     width: 80%;
-    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
+    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
     background-color: #3a3a3a;
     border: 2px solid #61dafb;
     border-radius: 10px;
@@ -108,7 +108,7 @@
 /* Kaynak Metin Alanı (Okuma Metni) - Konum ve Genişlik */
 .kaynak-metin-kutusu {
     width: 80%;
-    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
+    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
     padding: 25px; 
     border: 1px solid #4caf50;
     border-radius: 8px;
@@ -135,7 +135,7 @@
 /* Yazma Alanı (Textarea) - BÜYÜK KUTU */
 textarea {
     width: 80%;
-    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
+    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
     min-height: 250px; /* YÜKSEKLİK ARTIRILDI */
     padding: 20px;
     border: 1px solid #555;
@@ -210,7 +210,7 @@ textarea:focus {
 
 .admin-content {
     width: 80%;
-    max-width: 1000px; /* GENİŞLİK ARTIRILDI */
+    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
     margin-top: 20px;
 }
 
@@ -259,12 +259,18 @@ textarea:focus {
 .metin-list-item .metin-content {
     font-size: 0.9em;
     color: #ccc;
+    /* Metin taşmasını engellemek için */
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; /* ... koyar */
+    max-width: 700px; /* Liste elemanındaki metin genişliğini ayarla */
 }
 
 .delete-btn {
     background-color: #f44336;
     padding: 8px 15px;
     font-size: 0.8em;
+    flex-shrink: 0; /* Butonun küçülmesini engeller */
 }
 
 .uyari-mesaj {

@@ -1,279 +1,348 @@
-/* Genel Kapsayıcı ve Tema */
+/* Genel Ayarlar */
 .App {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    background-color: #282c34; /* Koyu Arka Plan */
+    background-color: #282c34;
     min-height: 100vh;
     color: white;
-    padding: 50px 20px;
-    font-family: Arial, sans-serif;
+    padding: 30px 20px; /* Üstten ve yandan boşluk */
+    font-family: 'Inter', sans-serif;
 }
 
-/* Başlık */
+/* Başlık ve Admin Butonu */
 .App-header {
-    width: 80%;
-    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
-
 .App-header h1 {
     color: #61dafb;
-    margin: 0;
+    margin-bottom: 10px;
+    font-size: 2.5em;
 }
 
-/* Admin Butonu */
-.admin-btn {
-    padding: 8px 15px;
-    border: 1px solid #61dafb;
-    border-radius: 5px;
-    background-color: #1a1a1a;
-    color: #61dafb;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s;
-}
-
-.admin-btn:hover {
-    background-color: #333;
-}
-
-
-/* SONUÇ KUTUSU STİLLERİ */
-.sonuc-kutusu {
-    width: 80%;
-    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
-    background-color: #3a3a3a;
-    border: 2px solid #61dafb;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 30px;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(97, 218, 251, 0.2);
-}
-
-.sonuc-kutusu h2 {
-    color: #4caf50;
-    margin-top: 0;
-    margin-bottom: 15px;
-}
-
-.sonuc-kutusu p {
-    font-size: 1.2em;
-    margin: 8px 0;
-}
-
-.sonuc-dbk strong {
-    font-size: 2.2em; /* DBK daha belirgin */
-    color: #61dafb;
-}
-
-
-/* Kontrol Alanı - YUKARI TAŞINDI */
+/* Kontrol ve Zaman Alanları (Metin Seçimi, Süre Seçimi) */
 .kontrol-alanı {
     display: flex;
     gap: 30px;
-    margin-bottom: 40px; 
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    margin-bottom: 40px; /* Yazma kutusundan daha fazla ayır */
+    color: #e0e0e0;
 }
-
 .kontrol-alanı label {
-    font-weight: bold;
-    color: #e0e0e0;
+    font-size: 1.1em;
+    font-weight: 500;
 }
-
 .kontrol-alanı select {
-    padding: 10px 15px;
-    border: 1px solid #444;
+    padding: 8px 15px;
+    border: none;
     border-radius: 6px;
-    background-color: #333;
-    color: #e0e0e0;
+    background-color: #3a3f47;
+    color: white;
     font-size: 1em;
     cursor: pointer;
 }
-
-/* Zaman Göstergesi */
-.timer-gosterge p {
-    font-size: 1.8em; 
-    font-weight: bold;
-    color: #4caf50; 
-    margin-bottom: 25px;
+.kontrol-alanı select:focus {
+    outline: 2px solid #61dafb;
 }
 
-/* Kaynak Metin Alanı (Okuma Metni) - Konum ve Genişlik */
+/* Zamanlayıcı Göstergesi */
+.timer-gosterge p {
+    font-size: 1.6em;
+    font-weight: bold;
+    color: #4caf50; /* Yeşil */
+    margin-bottom: 20px;
+}
+
+/* Kaynak Metin Alanı (Okuma Metni) */
 .kaynak-metin-kutusu {
-    width: 80%;
-    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
-    padding: 25px; 
+    width: 100%;
+    max-width: 1200px; /* Maksimum genişlik 1200px */
+    padding: 25px;
     border: 1px solid #4caf50;
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: #2e2e2e;
     text-align: left;
-    line-height: 1.7;
-    font-size: 1.2em; 
-    margin-bottom: 15px;
+    line-height: 1.8; /* Daha rahat okuma */
+    font-family: monospace;
+    font-size: 1.2em; /* Metin boyutu büyütüldü */
+    margin-bottom: 20px;
+    overflow-wrap: break-word; /* Uzun kelimeleri kırma */
+    white-space: pre-wrap; /* Boşlukları koru ve kır */
 }
 
 /* Hata ve Doğruluk Stilleri */
 .kaynak-metin-kutusu span.correct {
-    color: #4caf50; 
+    color: #4caf50; /* Yeşil */
 }
 .kaynak-metin-kutusu span.incorrect {
-    color: #f44336; 
+    color: #f44336; /* Kırmızı */
     text-decoration: underline;
 }
 .kaynak-metin-kutusu span.current {
-    background-color: rgba(255, 255, 255, 0.2); 
+    background-color: rgba(255, 255, 255, 0.2); /* Vurgu */
     border-radius: 2px;
+    padding: 0 1px;
 }
 
-/* Yazma Alanı (Textarea) - BÜYÜK KUTU */
+/* Yazma Alanı (Textarea) */
 textarea {
-    width: 80%;
-    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
-    min-height: 250px; /* YÜKSEKLİK ARTIRILDI */
+    width: 100%;
+    max-width: 1200px; /* Maksimum genişlik 1200px */
+    min-height: 250px; /* Yükseklik artırıldı */
     padding: 20px;
     border: 1px solid #555;
-    border-radius: 6px;
+    border-radius: 12px;
     background-color: #1a1a1a;
     color: white;
-    font-size: 1.3em; 
+    font-size: 1.3em; /* Yazı boyutu artırıldı */
     resize: vertical;
     transition: border-color 0.3s;
 }
-
 textarea:focus {
     border-color: #61dafb;
     outline: none;
 }
 
-/* Buton ve Sayaç Alanı */
+/* Sayıcı ve Butonlar */
 .bilgi-alanı {
     display: flex;
-    gap: 20px;
+    gap: 25px;
     justify-content: center;
-    margin-top: 30px; 
-    flex-wrap: wrap; 
+    align-items: center;
+    margin-top: 30px;
+    font-size: 1.1em;
 }
-
 .bilgi-alanı p {
-    background-color: #3a3a3a;
     padding: 10px 15px;
     border-radius: 6px;
-    font-weight: bold;
+    background-color: #3a3f47;
+    color: #fff;
 }
 
-/* Genel Buton Stilleri */
-.sifirla-btn, .kaydet-btn {
+/* Buton Stilleri */
+.sifirla-btn, .kaydet-btn, .admin-btn, .delete-btn {
     padding: 12px 25px;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.1s;
+    text-transform: uppercase;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
 .sifirla-btn {
-    background-color: #f44336;
+    background-color: #f44336; /* Kırmızı */
     color: white;
 }
-
 .sifirla-btn:hover {
     background-color: #d32f2f;
+    transform: translateY(-1px);
 }
 
 .kaydet-btn {
-    background-color: #4caf50;
+    background-color: #4caf50; /* Yeşil */
     color: white;
 }
-
-.kaydet-btn:hover:not(:disabled) {
+.kaydet-btn:hover {
     background-color: #388e3c;
+    transform: translateY(-1px);
 }
-
 .kaydet-btn:disabled {
     background-color: #777;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
-/* ========================================================= */
-/* ADMIN PANELİ STİLLERİ */
-/* ========================================================= */
-.admin-panel {
-    align-items: center;
-}
-
-.admin-content {
-    width: 80%;
-    max-width: 1200px; /* GENİŞLİK 1200px'e ARTIRILDI */
-    margin-top: 20px;
-}
-
-.metin-ekle-form, .mevcut-metinler {
-    background-color: #333;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 30px;
-    border: 1px solid #444;
-}
-
-.metin-ekle-form h2, .mevcut-metinler h2 {
-    color: #61dafb;
-    margin-top: 0;
-}
-
-.metin-ekle-form textarea {
-    width: 100%;
-    min-height: 100px;
-    box-sizing: border-box; /* Padding'in genişliğe dahil olmasını sağlar */
-    margin-bottom: 15px;
+.admin-btn {
+    background-color: #ff9800; /* Turuncu */
+    color: #282c34;
     font-size: 1em;
+    margin-top: 15px;
 }
-
-.metin-list-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px dashed #444;
-}
-
-.metin-list-item:last-child {
-    border-bottom: none;
-}
-
-.metin-list-item p {
-    margin: 0;
-    text-align: left;
-    flex-grow: 1;
-    margin-right: 15px;
-    padding: 0;
-    background-color: transparent;
-}
-
-.metin-list-item .metin-content {
-    font-size: 0.9em;
-    color: #ccc;
-    /* Metin taşmasını engellemek için */
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; /* ... koyar */
-    max-width: 700px; /* Liste elemanındaki metin genişliğini ayarla */
+.admin-btn:hover {
+    background-color: #fb8c00;
+    transform: translateY(-1px);
 }
 
 .delete-btn {
     background-color: #f44336;
+    color: white;
     padding: 8px 15px;
-    font-size: 0.8em;
-    flex-shrink: 0; /* Butonun küçülmesini engeller */
+    font-size: 0.9em;
+    box-shadow: none;
+}
+.delete-btn:hover {
+    background-color: #d32f2f;
+    transform: translateY(-1px);
+}
+.delete-btn:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+    transform: none;
 }
 
-.uyari-mesaj {
+/* Sonuç Kutusu */
+.sonuc-kutusu {
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 3px solid #61dafb;
+    border-radius: 12px;
+    background-color: #333940;
+    box-shadow: 0 0 15px rgba(97, 218, 251, 0.5);
+}
+.sonuc-kutusu h2 {
+    color: #61dafb;
+    margin-bottom: 10px;
+    font-size: 1.8em;
+}
+.sonuc-kutusu p {
+    font-size: 1.4em;
+    margin: 5px 0;
+}
+.sonuc-wpm {
+    color: #4caf50;
+    font-weight: bold;
+}
+.sonuc-accuracy {
+    color: #ff9800;
+    font-weight: bold;
+}
+
+/* ================== ADMIN PANELİ STİLLERİ ================== */
+
+.admin-panel {
+    padding-top: 20px;
+}
+.admin-header {
+    margin-bottom: 40px;
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.admin-header h2 {
+    color: #ff9800;
+}
+.admin-user-info {
+    color: #bbb;
+    font-size: 0.9em;
+}
+
+.admin-content-wrapper {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.admin-section {
+    padding: 25px;
+    border: 1px solid #ff9800;
+    border-radius: 12px;
+    background-color: #3a3f47;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.admin-section h3 {
+    color: #ffcc80;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 10px;
+}
+
+/* Yeni Metin Ekleme */
+.add-text-section form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.add-text-section textarea {
+    min-height: 150px;
+    max-width: none;
+}
+
+/* Mevcut Metinler Listesi */
+.current-texts-section {
+    background-color: #2e2e2e;
+}
+.text-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.text-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #3a3f47;
+    border-radius: 6px;
+    font-size: 0.9em;
+    word-break: break-all;
+}
+.text-list li p {
+    margin: 0;
+    flex-grow: 1;
+    text-align: left;
+    padding-right: 15px;
+    color: #e0e0e0;
+}
+
+.warning-text {
+    color: #ffcc80;
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+.yetki-yok-mesaji {
+    padding: 50px;
+    border: 2px solid #f44336;
+    border-radius: 10px;
+    background-color: #3a3f47;
+    max-width: 800px;
+    margin-top: 50px;
+}
+.yetki-yok-mesaji p {
     color: #f44336;
-    margin-top: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+/* ========================================================== */
+
+@media (max-width: 1300px) {
+    .kaynak-metin-kutusu, textarea, .sonuc-kutusu, .admin-content-wrapper, .admin-header {
+        max-width: 95%; 
+    }
+}
+@media (max-width: 768px) {
+    .bilgi-alanı {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .App-header h1 {
+        font-size: 2em;
+    }
+    .sifirla-btn, .kaydet-btn, .admin-btn {
+        width: 100%;
+    }
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
 }

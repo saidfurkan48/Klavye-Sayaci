@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/Klavye-Sayaci/static/css/main.d555f77b.css",
-    "main.js": "/Klavye-Sayaci/static/js/main.83a5df90.js",
+    "main.css": "/Klavye-Sayaci/static/css/main.d37d445f.css",
+    "main.js": "/Klavye-Sayaci/static/js/main.506af088.js",
     "static/js/453.f982fd70.chunk.js": "/Klavye-Sayaci/static/js/453.f982fd70.chunk.js",
     "index.html": "/Klavye-Sayaci/index.html",
-    "main.d555f77b.css.map": "/Klavye-Sayaci/static/css/main.d555f77b.css.map",
-    "main.83a5df90.js.map": "/Klavye-Sayaci/static/js/main.83a5df90.js.map",
+    "main.d37d445f.css.map": "/Klavye-Sayaci/static/css/main.d37d445f.css.map",
+    "main.506af088.js.map": "/Klavye-Sayaci/static/js/main.506af088.js.map",
     "453.f982fd70.chunk.js.map": "/Klavye-Sayaci/static/js/453.f982fd70.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.d555f77b.css",
-    "static/js/main.83a5df90.js"
+    "static/css/main.d37d445f.css",
+    "static/js/main.506af088.js"
   ]
 }

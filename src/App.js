@@ -23,7 +23,7 @@ const firebaseConfig = getGlobalVar('__firebase_config', {});
 const appId = getGlobalVar('__app_id', 'default-app-id');
 const initialAuthToken = getGlobalVar('__initial_auth_token', null); 
 
-// 💡 YENİ: Hardcoded Admin Bilgileri (SADECE DEMO AMAÇLIDIR, GÜVENLİK RİSKİ TAŞIR)
+// 💡 Admin Bilgileri (SADECE DEMO AMAÇLIDIR)
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "supersecretpassword123";
 
@@ -72,10 +72,11 @@ function App() {
   const [auth, setAuth] = useState(null);
   const [userId, setUserId] = useState(null);
   
-  // 💡 YENİ: Admin ve Giriş Durumu
-  const [isAdmin, setIsAdmin] = useState(false); // Sadece başarılı login ile true olacak
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Kullanıcının login olup olmadığını tutar
-  const [showLoginModal, setShowLoginModal] = useState(false); // Login modalını gösterir
+  // 💡 Admin ve Giriş Durumu
+  const [isAdmin, setIsAdmin] = useState(false); 
+  const [isLoggedIn, setIsLoggedIn] = useState(false); 
+  const [showLoginModal, setShowLoginModal] = useState(false); 
+  const [adminMessage, setAdminMessage] = useState({ type: '', text: '' }); // YENİ: Admin geri bildirim mesajı
   
   const [isLoading, setIsLoading] = useState(true);
   
@@ -109,7 +110,6 @@ function App() {
         const unsubscribe = onAuthStateChanged(authentication, (user) => {
           if (user) {
             setUserId(user.uid);
-            // 💡 NOT: isAdmin durumu artık burada değil, LoginModal'da belirleniyor.
           }
           setIsLoading(false);
         });
@@ -331,23 +331,32 @@ function App() {
   
   const handleAddText = async (event) => {
     event.preventDefault();
-    if (!db || !isAdmin || !addDoc || !collection) return;
+    setAdminMessage({ type: '', text: '' }); // Mesajı temizle
+
+    if (!db || !isAdmin || !addDoc || !collection) {
+        console.error("Hata: Firestore, Admin yetkisi veya gerekli fonksiyonlar eksik.");
+        setAdminMessage({ type: 'error', text: 'Kaydetme yetkisi veya bağlantı hatası.' });
+        return;
+    }
 
     const newTextarea = event.target.elements.newTextarea;
     const newText = newTextarea.value.trim();
     
-    if (newText.length > 10) {
+    // Metin kaydetme hatasının yaygın nedeni bu kontrolün geçilememesidir.
+    if (newText.length > 10) { 
       try {
         await addDoc(collection(db, `/artifacts/${appId}/public/data/typing_texts`), {
           text: newText,
           createdAt: new Date().toISOString()
         });
         newTextarea.value = ''; // Formu temizle
+        setAdminMessage({ type: 'success', text: 'Metin başarıyla eklendi!' }); // BAŞARI MESAJI
       } catch (e) {
         console.error("Metin eklenirken hata oluştu: ", e);
+        setAdminMessage({ type: 'error', text: 'Metin eklenirken bir Firestore hatası oluştu.' }); // HATA MESAJI
       }
     } else {
-      console.warn("Lütfen geçerli bir metin girin (en az 10 karakter).");
+      setAdminMessage({ type: 'warning', text: 'Lütfen geçerli bir metin girin (en az 10 karakter).' }); // UYARI MESAJI
     }
   };
 
@@ -443,7 +452,7 @@ function App() {
           <h2>Admin Metin Yönetim Paneli</h2>
           {/* Sadece başarılı giriş yapan kullanıcı ID'si gösterilir. */}
           {isAdmin && <p className="admin-user-info">Kullanıcı ID (Oturum Açık): {userId || "Yükleniyor..."}</p>}
-          <button className="sifirla-btn" onClick={() => setShowAdmin(false)}>
+          <button className="sifirla-btn" onClick={() => { setShowAdmin(false); setAdminMessage({ type: '', text: '' }); }}>
             Test Ekranına Dön
           </button>
         </div>
@@ -453,6 +462,14 @@ function App() {
             {/* Yeni Metin Ekleme */}
             <div className="admin-section add-text-section">
               <h3>Yeni Metin Ekle</h3>
+              
+              {/* YENİ: Admin Geri Bildirim Mesajı */}
+              {adminMessage.text && (
+                <div className={`admin-message admin-message-${adminMessage.type}`}>
+                  {adminMessage.text}
+                </div>
+              )}
+              
               <form onSubmit={handleAddText}>
                 <textarea 
                   name="newTextarea"
@@ -499,7 +516,7 @@ function App() {
       <header className="App-header">
         <h1>Klavye Sayacı & Hız Testi</h1>
         {isAdmin ? (
-          <button className="admin-btn" onClick={() => setShowAdmin(true)}>
+          <button className="admin-btn" onClick={() => { setShowAdmin(true); setAdminMessage({ type: '', text: '' }); }}>
             Metin Yönetimi
           </button>
         ) : (

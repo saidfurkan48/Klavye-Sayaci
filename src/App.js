@@ -23,7 +23,7 @@ const firebaseConfig = getGlobalVar('__firebase_config', {});
 const appId = getGlobalVar('__app_id', 'default-app-id');
 const initialAuthToken = getGlobalVar('__initial_auth_token', null); 
 
-// 💡 ADMIN BİLGİLERİ
+// 💡 ADMIN BİLGİLERİ (Kodunuzdan alınan sabit bilgiler)
 const ADMIN_USERNAME = "Furkan123";
 const ADMIN_PASSWORD = "Furkan147.?!";
 
@@ -41,7 +41,6 @@ const addDoc = window.firebase ? window.firebase.firestore.addDoc : null;
 const deleteDoc = window.firebase ? window.firebase.firestore.deleteDoc : null;
 const doc = window.firebase ? window.firebase.firestore.doc : null; 
 const initializeApp = window.firebase ? window.firebase.app.initializeApp : null;
-// setLogLevel ekledik, böylece debug mesajlarını görebiliriz.
 const setLogLevel = window.firebase ? window.firebase.firestore.setLogLevel : null;
 
 
@@ -92,20 +91,12 @@ function App() {
       // Hata ayıklama seviyesini ayarlama
       if (setLogLevel) {
         setLogLevel('debug');
-        console.log("Firestore Debug Log Level Aktif Edildi.");
       }
       
-      if (Object.keys(firebaseConfig).length === 0) {
-        console.error("HATA: Firebase konfigürasyonu boş.");
+      if (Object.keys(firebaseConfig).length === 0 || !initializeApp || !getFirestore || !getAuth) {
+        console.error("HATA: Firebase konfigürasyonu eksik veya SDK'lar bulunamadı.");
         setIsLoading(false);
-        setIsAuthReady(true); // Bağlantı olmayacaksa auth'u hazır olarak işaretle
-        return;
-      }
-      
-      if (!initializeApp || !getFirestore || !getAuth) {
-        console.error("Firebase SDK'ları bulunamadı. Uygulama kalıcı veri olmadan çalışacak.");
-        setIsLoading(false);
-        setIsAuthReady(true); // Bağlantı olmayacaksa auth'u hazır olarak işaretle
+        setIsAuthReady(true);
         return;
       }
       
@@ -117,40 +108,34 @@ function App() {
         setDb(firestore);
         setAuth(authentication);
 
-        // Oturum açma işlemleri (Anonim veya Canvas Token ile)
         const userSignIn = async () => {
           try {
             if (initialAuthToken) {
               await signInWithCustomToken(authentication, initialAuthToken);
-              console.log("Firebase: Canvas Token ile oturum açıldı.");
             } else {
               await signInAnonymously(authentication);
-              console.log("Firebase: Anonim olarak oturum açıldı.");
             }
           } catch (e) {
              console.error("Firebase Auth ile oturum açılırken hata:", e);
              setIsAuthReady(true);
              setIsLoading(false);
-             return;
           }
         };
         
-        // Auth state değişimi dinleyicisi
+        // 💡 ÖNEMLİ DÜZELTME: onAuthStateChanged içinde Auth Ready ve userId'yi ayarlıyoruz.
         const unsubscribe = onAuthStateChanged(authentication, (user) => {
           if (user) {
             setUserId(user.uid);
-            setIsAuthReady(true); // Auth hazır!
-            console.log("Firebase: Auth State Değişti. Kullanıcı ID:", user.uid);
+            console.log("Firebase: Kullanıcı ID belirlendi:", user.uid);
           } else {
-            // Token yoksa ve anonim de başarısızsa buraya düşebilir.
             setUserId(null); 
-            setIsAuthReady(true);
-            console.log("Firebase: Auth State Değişti. Kullanıcı yok.");
           }
+          // Kimlik doğrulama dinleyicisi bir kez çalıştıktan sonra hazırız.
+          setIsAuthReady(true);
           setIsLoading(false);
         });
 
-        await userSignIn(); // Token ile veya anonim giriş yap
+        await userSignIn();
         
         return () => unsubscribe();
 
@@ -169,7 +154,7 @@ function App() {
   // D. METİN VERİLERİNİ ÇEKME ETKİSİ (useEffect Hook)
   // =========================================================
   useEffect(() => {
-    // AuthReady, DB ve gerekli fonksiyonlar hazır olana kadar bekle
+    // 💡 Düzeltme: isAuthReady 'true' olduğunda verileri çekmeye başla
     if (!db || !isAuthReady || !collection || !query || !onSnapshot) return; 
 
     // Verilerin saklanacağı koleksiyon yolu (Herkese açık)
@@ -185,9 +170,7 @@ function App() {
       
       setKaynakMetinler(texts);
 
-      // Metin seçimi mantığı
       if (texts.length > 0) {
-        // Eğer mevcut seçili metin listede yoksa veya ilk kez yükleniyorsa ilkini seç.
         const currentTextExists = texts.some(item => item.text === selectedText);
         if (!selectedText || !currentTextExists) {
             const initialText = texts[0].text;
@@ -199,20 +182,17 @@ function App() {
         resetTest(selectedTime, '');
       }
     }, (error) => {
-      // 💡 HATA YÖNETİMİ: Güvenlik kuralları hatası buraya düşebilir
-      console.error("Firestore verileri çekilirken hata oluştu. (Lütfen Firebase konsolundaki güvenlik kurallarını kontrol edin):", error.message);
-      // Eğer veriler çekilemezse, kullanıcıya Admin panelinde bir hata gösteririz.
+      console.error("Firestore verileri çekilirken hata oluştu:", error.message);
       setAdminMessage({ type: 'error', text: 'VERİ ÇEKME HATASI: Verilere erişilemiyor. (Güvenlik Kurallarını Kontrol Edin)' });
     });
 
     return () => unsubscribe();
-  }, [db, appId, isAuthReady, selectedTime, selectedText]); // isAuthReady bağımlılığı eklendi
+  }, [db, appId, isAuthReady, selectedTime, selectedText]); 
 
   // =========================================================
-  // E. TEMEL TEST MANTIĞI (Değişiklik Yok)
+  // E. TEMEL TEST MANTIĞI 
   // =========================================================
 
-  // Yazma Alanı Değiştiğinde
   const handleInputChange = (event) => {
     const newText = event.target.value;
     
@@ -221,7 +201,6 @@ function App() {
 
     setInputText(newText);
     
-    // Zamanlayıcıyı sadece seçili süre Sınırsız değilse başlat
     if (newText.length === 1 && !isTyping && selectedTime !== Infinity) {
       setIsTyping(true);
     }
@@ -233,7 +212,6 @@ function App() {
     }
   };
   
-  // Hata Sayısını Hesaplayan Fonksiyon
   const updateErrorCount = (currentInput) => {
     let errors = 0;
     for (let i = 0; i < currentInput.length; i++) {
@@ -244,7 +222,6 @@ function App() {
     setErrorCount(errors);
   };
   
-  // Testi Sonlandırma Fonksiyonu
   const handleFinishTest = () => {
     setIsTyping(false);
     setIsFinished(true);
@@ -259,7 +236,6 @@ function App() {
       timeSpentSeconds = selectedTime - timeLeft;
       
       if (timeSpentSeconds > 0) {
-        // WPM: (Doğru karakter sayısı / 5) / (Harcanan süre / 60)
         calculatedWPM = Math.round((correctCharacters / 5) / (timeSpentSeconds / 60));
       }
     } 
@@ -273,23 +249,19 @@ function App() {
     setAccuracy(calculatedAccuracy);
   };
 
-  // Metin Seçimini Değiştirme
   const handleTextChange = (event) => {
     const newTextId = event.target.value;
-    // O anki metin ID'sine göre metni bul
     const newText = kaynakMetinler.find(item => item.id === newTextId)?.text || '';
     setSelectedText(newText);
     resetTest(selectedTime, newText);
   };
 
-  // Zaman Seçimini Değiştirme
   const handleTimeChange = (event) => {
     const newTime = event.target.value === "Infinity" ? Infinity : parseInt(event.target.value);
     setSelectedTime(newTime);
     resetTest(newTime, selectedText);
   };
   
-  // Testi Sıfırlama Fonksiyonu
   const resetTest = (time = selectedTime, text = selectedText) => {
     setInputText('');
     setIsTyping(false);
@@ -301,10 +273,9 @@ function App() {
   };
 
   // =========================================================
-  // F. ZAMANLAYICI VE HESAPLAMA ETKİSİ (Değişiklik Yok)
+  // F. ZAMANLAYICI VE HESAPLAMA ETKİSİ 
   // =========================================================
 
-  // Zamanlayıcı Etkisi (useEffect Hook)
   useEffect(() => {
     let timer = null;
 
@@ -327,11 +298,9 @@ function App() {
   }, [isTyping, timeLeft, selectedTime, isFinished]);
 
 
-  // Metin ve Kelime Sayacı Hesaplamaları
   const characterCount = inputText.length;
   const wordCount = inputText.trim() === '' ? 0 : inputText.trim().split(/\s+/).length;
   
-  // Zamanı dakika:saniye formatında göster
   const formatTime = (time) => {
     if (time === Infinity) return "Sınırsız";
     const minutes = Math.floor(time / 60);
@@ -339,7 +308,6 @@ function App() {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // KAYNAK METNİ RENDER EDEN FONKSİYON (Hata Vurgulama)
   const renderSourceText = () => {
     if (!selectedText) return <span className="text-warning">Metin bulunamadı. Lütfen Admin panelinden yeni metin ekleyin.</span>;
 
@@ -362,17 +330,16 @@ function App() {
   };
 
   // =========================================================
-  // G. ADMIN PANELİ MANTIĞI (Firestore) - Yetki Kontrolü Güçlendirildi
+  // G. ADMIN PANELİ MANTIĞI (Firestore)
   // =========================================================
   
   const handleAddText = async (event) => {
     event.preventDefault();
     setAdminMessage({ type: '', text: '' }); 
 
-    // 💡 GÜÇLENDİRİLMİŞ KONTROL: db, Auth ve Admin yetkisi kontrolü
+    // 💡 GÜÇLENDİRİLMİŞ KONTROL: userId 'null' değilse ve Admin ise yetki var.
     if (!db || !isAuthReady || !isAdmin || !userId) {
-        // userId yoksa veya admin değilse izin verme
-        setAdminMessage({ type: 'error', text: `Kaydetme yetkisi veya bağlantı hatası. Durum: AuthReady=${isAuthReady}, IsAdmin=${isAdmin}, UserId=${!!userId ? 'Evet' : 'Hayır'}.` });
+        setAdminMessage({ type: 'error', text: `Kaydetme yetkisi veya bağlantı hatası. Durum: Bağlantı ${isAuthReady ? 'Hazır' : 'Bekleniyor'}, Admin ${isAdmin ? 'Evet' : 'Hayır'}, Kullanıcı ID ${!!userId ? 'Var' : 'Yok'}. Lütfen tekrar giriş yapın.` });
         return;
     }
 
@@ -384,14 +351,13 @@ function App() {
         const collectionPath = `/artifacts/${appId}/public/data/typing_texts`;
         await addDoc(collection(db, collectionPath), {
           text: newText,
-          createdBy: userId, // Dokümana kimin eklediğini kaydetmek için userId kullanılıyor
+          createdBy: userId,
           createdAt: new Date().toISOString()
         });
         newTextarea.value = ''; 
         setAdminMessage({ type: 'success', text: 'Metin başarıyla eklendi!' }); 
       } catch (e) {
         console.error("Metin eklenirken hata oluştu: ", e);
-        // Güvenlik kuralları hatası varsa bu mesajı gösterir
         setAdminMessage({ type: 'error', text: `Metin eklenirken bir Firestore hatası oluştu: İşlem reddedildi. Güvenlik kurallarını ve konsolu kontrol edin.` }); 
       }
     } else {
@@ -400,11 +366,9 @@ function App() {
   };
 
   const handleDeleteText = async (id) => {
-    // Silme işlemi için de userId kontrolü ekleyelim.
     if (!db || !isAdmin || !deleteDoc || !doc || !userId) return;
     
     if (kaynakMetinler.length <= 1) {
-      console.warn("En az bir metin kalmalıdır!");
       setAdminMessage({ type: 'warning', text: 'En az bir metin kalmalıdır!' });
       return;
     }
@@ -422,7 +386,7 @@ function App() {
   };
   
   // =========================================================
-  // H. ADMIN GİRİŞ MODALI (Değişiklik Yok)
+  // H. ADMIN GİRİŞ MODALI
   // =========================================================
   
   const LoginModal = () => {
@@ -434,11 +398,12 @@ function App() {
       e.preventDefault();
       setErrorMessage('');
       
-      // Hardcoded kontrol (ADMIN BİLGİLERİ KULLANILIYOR)
       if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
         setIsAdmin(true); 
         setShowLoginModal(false);
+        // Admin girişi başarılı olduktan sonra Admin paneline yönlendir.
+        setShowAdmin(true); 
       } else {
         setErrorMessage("Hatalı kullanıcı adı veya şifre.");
       }
@@ -449,9 +414,9 @@ function App() {
         <div className="login-modal">
           <h2>Admin Girişi</h2>
           <p className="login-uyari">
-             ⚠️ Bu giriş **sadece demo amaçlıdır**. Gerçek projelerde bu şekilde şifre tutulmaz.
+             ⚠️ Bu giriş **sadece demo amaçlıdır**. 
              <br/>
-             Güncel Bilgiler: Kullanıcı Adı: **{ADMIN_USERNAME}**, Şifre: **{ADMIN_PASSWORD}**
+             Bilgiler: Kullanıcı Adı: **{ADMIN_USERNAME}**, Şifre: **{ADMIN_PASSWORD}**
           </p>
           <form onSubmit={handleSubmit}>
             <input 
@@ -485,17 +450,17 @@ function App() {
     return <div className="App"><p>Firebase Bağlantısı Başlatılıyor...</p></div>;
   }
 
+  // Admin Butonu için Hazırlık Kontrolü
+  // 💡 ÖNEMLİ DÜZELTME: userId'nin null OLMAMASI gerekiyor.
+  const isReadyToSave = isAuthReady && isAdmin && !!userId; 
+  const buttonText = isReadyToSave ? 'Metni Kaydet' : (
+      !isAuthReady ? 'Bağlantı Kuruluyor...' : 
+      !isAdmin ? 'Admin Yetkisi Yok' : 
+      !userId ? 'Kullanıcı Oturumu Bekleniyor...' : 'Metni Kaydet'
+  );
+
   // Yönetim Paneli Arayüzü
   if (showAdmin) {
-    // 💡 Admin ID göstergesi ve button metni güncellendi
-    // Kaydetmek için AUTH'un hazır olması ve Admin olarak giriş yapılması GEREKİR.
-    const isReadyToSave = isAuthReady && isAdmin && !!userId; 
-    const buttonText = isReadyToSave ? 'Metni Kaydet' : (
-        !isAuthReady ? 'Bağlantı Kuruluyor...' : 
-        !isAdmin ? 'Admin Yetkisi Yok (Giriş Yapın)' : 
-        !userId ? 'Kullanıcı Oturumu Bekleniyor...' : 'Metni Kaydet'
-    );
-    
     return (
       <div className="App admin-panel">
         <div className="admin-header">
@@ -503,8 +468,7 @@ function App() {
           
           <p className="admin-user-info">
               Kullanıcı ID (Oturum Açık): 
-              {isAuthReady ? (userId || "Token/Anonim Bağlantı Başarılı") : "Bağlantı Kuruluyor..."}
-              {/* Eğer admin girişi yapıldıysa, admin durumunu göster */}
+              {isAuthReady ? (userId || "Anonim/Token Bağlantısı Kuruldu") : "Bağlantı Kuruluyor..."}
               {isAdmin && <span className="admin-badge"> (Admin)</span>}
           </p>
           
@@ -613,7 +577,6 @@ function App() {
         <select 
           id="text-select" 
           onChange={handleTextChange} 
-          // Seçili metnin ID'sini bul, yoksa boş string kullan
           value={kaynakMetinler.find(item => item.text === selectedText)?.id || ''} 
           disabled={isTyping || isFinished || kaynakMetinler.length === 0}
         >

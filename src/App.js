@@ -7,16 +7,19 @@ import {
 } from 'firebase/auth';
 import { 
     getFirestore, collection, query, onSnapshot, addDoc, deleteDoc, doc, 
-    setDoc, serverTimestamp, getDocs
+    serverTimestamp 
 } from 'firebase/firestore';
 
 // Tailwind CSS is assumed to be available in the environment
 
 // --- GLOBAL VARIABLES (Canvas tarafından sağlanır, DİKKAT: __app_id ve __firebase_config string olarak gelir) ---
+// Hata çözümü: Değişkenlerin tanımlı olup olmadığını kontrol etme yapısı eklendi.
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
     ? JSON.parse(__firebase_config) 
-    : { /* Yerel test için boş veya varsayılan config */ };
+    : { /* Varsayılan veya boş config */ };
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
 
 // Sabitler
 const ZAMAN_SEÇENEKLERI = [
@@ -25,7 +28,9 @@ const ZAMAN_SEÇENEKLERI = [
     { value: Infinity, label: "Sınırsız" },
 ];
 
-const ADMIN_USER_ID = "YOUR_ADMIN_USER_ID_HERE"; // **DİKKAT: Gerçek admin ID'nizi buraya yazmalısınız.**
+// **DİKKAT: Gerçek admin ID'nizi buraya yazmalısınız.**
+// Önceki adımda kopyaladığınız ID'yi buraya yapıştırmayı unutmayın!
+const ADMIN_USER_ID = "YOUR_ADMIN_USER_ID_HERE"; 
 
 // Yardımcı Fonksiyon: Saniye formatlama (mm:ss)
 const formatTime = (seconds) => {
@@ -133,7 +138,8 @@ const App = () => {
         if (Object.keys(firebaseConfig).length === 0) {
             console.error("Firebase konfigürasyonu eksik.");
             setAuthStatus("Bağlantı Hatası: Firebase Config eksik.");
-            return;
+            // Devam etmemek için erken çıkış yapılabilir
+            // return; 
         }
 
         try {
@@ -146,14 +152,12 @@ const App = () => {
 
             onAuthStateChanged(_auth, async (user) => {
                 let currentUserId = 'anon-' + (user ? user.uid : crypto.randomUUID());
-                if (user) {
-                    currentUserId = user.uid;
-                } else {
+                
+                if (!user) {
                     // Oturum açma yoksa anonim oturum açmayı dene
-                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                     try {
-                        if (token) {
-                            await signInWithCustomToken(_auth, token);
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(_auth, initialAuthToken);
                         } else {
                             await signInAnonymously(_auth);
                         }
@@ -163,6 +167,7 @@ const App = () => {
                     }
                 }
                 
+                // onAuthStateChanged tetiklendiğinde güncel kullanıcıyı al
                 const finalUserId = _auth.currentUser?.uid || currentUserId;
                 setUserId(finalUserId);
                 
@@ -177,7 +182,7 @@ const App = () => {
             console.error("Firebase başlatılırken hata oluştu:", e);
             setAuthStatus("Bağlantı Kurulamadı.");
         }
-    }, []);
+    }, []); // Bağımlılık dizisi boş olmalı
 
     // -----------------------------------------------------------
     // FIREBASE DATA FETCHING (Metinler)
@@ -185,6 +190,7 @@ const App = () => {
     useEffect(() => {
         if (!db || !isAuthReady) return;
 
+        // Firebase Güvenlik Kurallarına uygun public path
         const collectionPath = `/artifacts/${appId}/public/data/typing_texts`;
         const q = query(collection(db, collectionPath));
 

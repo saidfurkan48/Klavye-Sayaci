@@ -86,8 +86,16 @@ function App() {
   // =========================================================
   useEffect(() => {
     const initializeFirebase = async () => {
-      if (!initializeApp || !getFirestore || !getAuth || Object.keys(firebaseConfig).length === 0) {
-        console.error("Firebase SDK'ları veya konfigürasyonu bulunamadı. Uygulama kalıcı veri olmadan çalışacak.");
+      
+      // 💡 HATA AYIKLAMA LOGU EKLENDİ
+      if (Object.keys(firebaseConfig).length === 0) {
+        console.error("HATA: Firebase konfigürasyonu boş. Firebase bağlantısı kurulamıyor. Lütfen Canvas ortamının doğru yapılandırıldığından emin olun.");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!initializeApp || !getFirestore || !getAuth) {
+        console.error("Firebase SDK'ları bulunamadı (initializeApp, getFirestore, getAuth). Uygulama kalıcı veri olmadan çalışacak.");
         setIsLoading(false);
         return;
       }
@@ -102,10 +110,20 @@ function App() {
 
         // Oturum açma işlemleri (Anonim veya Canvas Token ile)
         const userSignIn = async () => {
-          if (initialAuthToken) {
-            await signInWithCustomToken(authentication, initialAuthToken);
-          } else {
-            await signInAnonymously(authentication);
+          try {
+            if (initialAuthToken) {
+              await signInWithCustomToken(authentication, initialAuthToken);
+              console.log("Firebase: Canvas Token ile oturum açıldı.");
+            } else {
+              await signInAnonymously(authentication);
+              console.log("Firebase: Anonim olarak oturum açıldı.");
+            }
+          } catch (e) {
+             console.error("Firebase Auth ile oturum açılırken hata:", e);
+             // Hata durumunda bile Auth Ready'yi true yapmalıyız ki uygulama takılmasın
+             setIsAuthReady(true);
+             setIsLoading(false);
+             return;
           }
         };
         
@@ -114,9 +132,11 @@ function App() {
           if (user) {
             setUserId(user.uid);
             setIsAuthReady(true); // Auth hazır!
+            console.log("Firebase: Auth State Değişti. Kullanıcı ID:", user.uid);
           } else {
             // Eğer anonim giriş yapılmazsa userId null kalabilir, ama isAuthReady true olmalı
             setIsAuthReady(true);
+            console.log("Firebase: Auth State Değişti. Kullanıcı yok (anonim veya çıkış yapılmış).");
           }
           setIsLoading(false);
         });
@@ -126,7 +146,7 @@ function App() {
         return () => unsubscribe();
 
       } catch (error) {
-        console.error("Firebase başlatılırken hata oluştu:", error);
+        console.error("Firebase başlatılırken kritik hata oluştu:", error);
         setIsLoading(false);
       }
     };
@@ -452,7 +472,7 @@ function App() {
   if (showAdmin) {
     // 💡 Admin ID göstergesi ve button metni güncellendi
     const isReadyToSave = isAuthReady && isAdmin;
-    const buttonText = isReadyToSave ? 'Metni Kaydet' : 'Bağlantı Kuruluyor...';
+    const buttonText = isReadyToSave ? 'Metni Kaydet' : (isAuthReady ? 'Admin Yetkisi Yok' : 'Bağlantı Kuruluyor...');
     
     return (
       <div className="App admin-panel">
@@ -462,7 +482,7 @@ function App() {
           {isAdmin && (
             <p className="admin-user-info">
                 Kullanıcı ID (Oturum Açık): 
-                {isAuthReady ? userId : "Bağlantı Kuruluyor..."}
+                {isAuthReady ? userId || "Anonim/Token Bağlantısı Başarılı" : "Bağlantı Kuruluyor..."}
             </p>
           )}
           <button className="sifirla-btn" onClick={() => { setShowAdmin(false); setAdminMessage({ type: '', text: '' }); }}>

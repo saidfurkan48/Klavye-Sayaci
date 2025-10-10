@@ -114,6 +114,9 @@ function App() {
           if (user) {
             setUserId(user.uid);
             setIsAuthReady(true); // Auth hazır!
+          } else {
+            // Eğer anonim giriş yapılmazsa userId null kalabilir, ama isAuthReady true olmalı
+            setIsAuthReady(true);
           }
           setIsLoading(false);
         });
@@ -332,8 +335,8 @@ function App() {
 
     // 💡 GÜÇLENDİRİLMİŞ KONTROL: db, Auth ve Admin yetkisi kontrolü
     if (!db || !isAuthReady || !isAdmin) {
-        // UserId'nin gelmesini ve admin yetkisinin verilmesini beklemek
-        setAdminMessage({ type: 'error', text: 'Kaydetme yetkisi veya bağlantı hatası. Lütfen Admin olarak giriş yaptığınızdan ve sayfanın tamamen yüklendiğinden emin olun.' });
+        // userId'nin gelmesini ve admin yetkisinin verilmesini beklemek
+        setAdminMessage({ type: 'error', text: 'Kaydetme yetkisi veya bağlantı hatası. Lütfen Admin olarak giriş yaptığınızdan ve Firebase bağlantısının kurulduğundan emin olun.' });
         return;
     }
 
@@ -345,7 +348,7 @@ function App() {
         const collectionPath = `/artifacts/${appId}/public/data/typing_texts`;
         await addDoc(collection(db, collectionPath), {
           text: newText,
-          createdBy: userId, 
+          createdBy: userId, // Dokümana kimin eklediğini kaydetmek için userId kullanılıyor
           createdAt: new Date().toISOString()
         });
         newTextarea.value = ''; 
@@ -447,12 +450,21 @@ function App() {
 
   // Yönetim Paneli Arayüzü
   if (showAdmin) {
+    // 💡 Admin ID göstergesi ve button metni güncellendi
+    const isReadyToSave = isAuthReady && isAdmin;
+    const buttonText = isReadyToSave ? 'Metni Kaydet' : 'Bağlantı Kuruluyor...';
+    
     return (
       <div className="App admin-panel">
         <div className="admin-header">
           <h2>Admin Metin Yönetim Paneli</h2>
           {/* Sadece başarılı giriş yapan kullanıcı ID'si gösterilir. */}
-          {isAdmin && <p className="admin-user-info">Kullanıcı ID (Oturum Açık): {userId || "Yükleniyor..."}</p>}
+          {isAdmin && (
+            <p className="admin-user-info">
+                Kullanıcı ID (Oturum Açık): 
+                {isAuthReady ? userId : "Bağlantı Kuruluyor..."}
+            </p>
+          )}
           <button className="sifirla-btn" onClick={() => { setShowAdmin(false); setAdminMessage({ type: '', text: '' }); }}>
             Test Ekranına Dön
           </button>
@@ -478,7 +490,13 @@ function App() {
                   rows="10"
                   required
                 />
-                <button type="submit" className="kaydet-btn" disabled={!isAuthReady || !isAdmin}>Metni Kaydet</button>
+                <button 
+                  type="submit" 
+                  className="kaydet-btn" 
+                  disabled={!isReadyToSave} // isAuthReady ve isAdmin kontrolü
+                >
+                  {buttonText}
+                </button>
               </form>
             </div>
 
@@ -492,7 +510,7 @@ function App() {
                     <button 
                       className="delete-btn" 
                       onClick={() => handleDeleteText(item.id)}
-                      disabled={kaynakMetinler.length <= 1}
+                      disabled={kaynakMetinler.length <= 1 || !isReadyToSave}
                     >
                       Sil
                     </button>

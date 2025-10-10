@@ -23,9 +23,9 @@ const firebaseConfig = getGlobalVar('__firebase_config', {});
 const appId = getGlobalVar('__app_id', 'default-app-id');
 const initialAuthToken = getGlobalVar('__initial_auth_token', null); 
 
-// 💡 Admin Bilgileri (SADECE DEMO AMAÇLIDIR)
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "supersecretpassword123";
+// 💡 ADMIN BİLGİLERİ GÜNCELLENDİ (Lütfen gerçek projelerde bu şekilde şifre tutmayınız)
+const ADMIN_USERNAME = "Furkan123";
+const ADMIN_PASSWORD = "Furkan147.?!";
 
 // Global Firebase fonksiyonlarını varsayıyoruz
 const getAuth = window.firebase ? window.firebase.auth.getAuth : null;
@@ -130,7 +130,8 @@ function App() {
   // D. METİN VERİLERİNİ ÇEKME ETKİSİ (useEffect Hook)
   // =========================================================
   useEffect(() => {
-    if (!db || isLoading || !collection || !query || !onSnapshot) return; // DB hazır olana kadar bekle
+    // db'nin ve userId'nin null olmaması gerekiyor
+    if (!db || isLoading || !collection || !query || !onSnapshot || !userId) return; 
 
     // Verilerin saklanacağı koleksiyon yolu (Herkese açık)
     const collectionPath = `/artifacts/${appId}/public/data/typing_texts`;
@@ -164,7 +165,7 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [db, appId, isLoading, selectedTime]); 
+  }, [db, appId, isLoading, selectedTime, userId]); // userId bağımlılığı eklendi
 
   // =========================================================
   // E. TEMEL TEST MANTIĞI
@@ -333,9 +334,10 @@ function App() {
     event.preventDefault();
     setAdminMessage({ type: '', text: '' }); // Mesajı temizle
 
-    if (!db || !isAdmin || !addDoc || !collection) {
-        console.error("Hata: Firestore, Admin yetkisi veya gerekli fonksiyonlar eksik.");
-        setAdminMessage({ type: 'error', text: 'Kaydetme yetkisi veya bağlantı hatası.' });
+    if (!db || !isAdmin || !addDoc || !collection || !userId) {
+        // userId kontrolü yetkilendirme (Auth) ve db kontrolü bağlantıyı ifade eder.
+        console.error("Hata: Firestore, Admin yetkisi veya bağlantı/kimlik doğrulama eksik. DB/User ID hazır değil.");
+        setAdminMessage({ type: 'error', text: 'Kaydetme yetkisi veya bağlantı hatası. Lütfen giriş yaptığınızdan emin olun.' });
         return;
     }
 
@@ -347,13 +349,15 @@ function App() {
       try {
         await addDoc(collection(db, `/artifacts/${appId}/public/data/typing_texts`), {
           text: newText,
+          // Metin ekleyen adminin kimliğini kaydetmek iyi bir uygulamadır.
+          createdBy: userId, 
           createdAt: new Date().toISOString()
         });
         newTextarea.value = ''; // Formu temizle
         setAdminMessage({ type: 'success', text: 'Metin başarıyla eklendi!' }); // BAŞARI MESAJI
       } catch (e) {
         console.error("Metin eklenirken hata oluştu: ", e);
-        setAdminMessage({ type: 'error', text: 'Metin eklenirken bir Firestore hatası oluştu.' }); // HATA MESAJI
+        setAdminMessage({ type: 'error', text: `Metin eklenirken bir Firestore hatası oluştu: ${e.message}` }); // HATA MESAJI
       }
     } else {
       setAdminMessage({ type: 'warning', text: 'Lütfen geçerli bir metin girin (en az 10 karakter).' }); // UYARI MESAJI
@@ -366,6 +370,7 @@ function App() {
     // En az bir metin kalmasını sağlamak
     if (kaynakMetinler.length <= 1) {
       console.warn("En az bir metin kalmalıdır!");
+      setAdminMessage({ type: 'warning', text: 'En az bir metin kalmalıdır!' });
       return;
     }
 
@@ -375,8 +380,10 @@ function App() {
     try {
       const docRef = doc(db, `/artifacts/${appId}/public/data/typing_texts`, id);
       await deleteDoc(docRef);
+      setAdminMessage({ type: 'success', text: 'Metin başarıyla silindi.' });
     } catch (e) {
       console.error("Metin silinirken hata oluştu: ", e);
+      setAdminMessage({ type: 'error', text: `Metin silinirken bir Firestore hatası oluştu: ${e.message}` });
     }
   };
   
@@ -393,7 +400,7 @@ function App() {
       e.preventDefault();
       setErrorMessage('');
       
-      // Hardcoded kontrol
+      // Hardcoded kontrol (ADMIN BİLGİLERİ KULLANILIYOR)
       if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
         setIsAdmin(true); 
@@ -410,7 +417,7 @@ function App() {
           <p className="login-uyari">
              ⚠️ Bu giriş **sadece demo amaçlıdır**. Gerçek projelerde bu şekilde şifre tutulmaz.
              <br/>
-             Demo Bilgileri: Kullanıcı Adı: **{ADMIN_USERNAME}**, Şifre: **{ADMIN_PASSWORD}**
+             Güncel Bilgiler: Kullanıcı Adı: **{ADMIN_USERNAME}**, Şifre: **{ADMIN_PASSWORD}**
           </p>
           <form onSubmit={handleSubmit}>
             <input 
